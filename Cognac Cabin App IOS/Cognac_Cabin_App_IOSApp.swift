@@ -1,11 +1,5 @@
-//
-//  Cognac_Cabin_App_IOSApp.swift
-//  Cognac Cabin App IOS
-//
-//  Created by Adam Koniak on 2/15/26.
-//
-
 import SwiftUI
+import SwiftData
 
 @main
 struct Cognac_Cabin_App_IOSApp: App {
@@ -13,5 +7,6 @@ struct Cognac_Cabin_App_IOSApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [ChecklistSection.self, ChecklistItem.self])
     }
 }
