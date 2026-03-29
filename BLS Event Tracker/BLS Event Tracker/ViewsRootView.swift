@@ -49,17 +49,24 @@ struct RootView: View {
                     .alert("BLS Community Powered Status", isPresented: $showWelcome) {
                         Button("I Understand", role: .none) {
                             lastSeenMessage = announcementManager.message
+                            // Request permission after the announcement is dismissed
+                            // so the two system dialogs don't compete on first launch.
+                            Task { await NotificationManager.shared.requestPermission() }
                         }
                     } message: {
                         Text(welcomeMessage)
                     }
                     .task {
                         announcementManager.startListening()
-                        await NotificationManager.shared.requestPermission()
                     }
                     .onChange(of: announcementManager.hasReceivedFirstMessage) { _, received in
                         if received {
                             checkLaunchAnnouncement(announcementManager.message)
+                            // If no announcement dialog is showing, request permission now.
+                            // If it is showing, the "I Understand" button requests it after dismissal.
+                            if !showWelcome {
+                                Task { await NotificationManager.shared.requestPermission() }
+                            }
                         }
                     }
                     .onChange(of: announcementManager.message) { _, newMessage in
