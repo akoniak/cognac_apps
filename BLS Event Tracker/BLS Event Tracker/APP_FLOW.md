@@ -1,0 +1,394 @@
+# App Flow Diagram
+
+## Authentication Flow
+
+```
+┌─────────────────────┐
+│   App Launch        │
+│ (BLS_Event_Tracker  │
+│       App)          │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│    RootView         │
+│  (Auth Router)      │
+└──────────┬──────────┘
+           │
+     ┌─────┴─────┐
+     │           │
+     ▼           ▼
+┌──────────┐  ┌──────────┐
+│ Not      │  │ Auth     │
+│ Signed   │  │ Detected │
+│ In       │  │          │
+└────┬─────┘  └────┬─────┘
+     │             │
+     ▼             ▼
+┌──────────────┐ ┌──────────────┐
+│Authentication│ │  MainMapView │
+│    View      │ │              │
+└──────────────┘ └──────────────┘
+```
+
+## Authentication Options
+
+```
+┌─────────────────────────────────┐
+│      Authentication View         │
+└─────────────────────────────────┘
+                │
+        ┌───────┴───────┐
+        │               │
+        ▼               ▼
+┌──────────────┐  ┌──────────────┐
+│ Sign in with │  │ Email/Pass   │
+│    Apple     │  │  (Testing)   │
+│  (Primary)   │  │              │
+└──────┬───────┘  └──────┬───────┘
+       │                 │
+       └────────┬────────┘
+                │
+                ▼
+    ┌──────────────────────┐
+    │ AuthenticationManager │
+    │   (Firebase Auth)     │
+    └──────────┬────────────┘
+               │
+               ▼
+    ┌──────────────────────┐
+    │  Create/Load User    │
+    │      Profile         │
+    └──────────┬────────────┘
+               │
+               ▼
+    ┌──────────────────────┐
+    │     MainMapView      │
+    └──────────────────────┘
+```
+
+## Main Map Flow
+
+```
+┌─────────────────────────────────────┐
+│         MainMapView                  │
+│  ┌─────────────────────────────┐    │
+│  │                             │    │
+│  │      Apple MapKit Map       │    │
+│  │                             │    │
+│  │  ● Report Markers           │    │
+│  │  ● User Location            │    │
+│  │  ● Zoom/Pan Controls        │    │
+│  │                             │    │
+│  └─────────────────────────────┘    │
+│                                      │
+│  ┌─────────┐         ┌──────────┐   │
+│  │ Refresh │         │ Profile  │   │
+│  │ Button  │         │ Button   │   │
+│  └─────────┘         └──────────┘   │
+│                                      │
+│  ┌──────────────────────────────┐   │
+│  │    Report Detail Card        │   │
+│  │ (when marker tapped)         │   │
+│  │  • Details                   │   │
+│  │  • Verify Button             │   │
+│  │  • Dispute Button            │   │
+│  └──────────────────────────────┘   │
+│                                      │
+│  ┌──────────────────────────────┐   │
+│  │   [+] New Report Button      │   │
+│  └──────────────────────────────┘   │
+└─────────────────────────────────────┘
+```
+
+## Report Submission Flow
+
+```
+┌─────────────────────┐
+│  Tap "New Report"   │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│   NewReportView     │
+│   (Sheet Modal)     │
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│  Select Category:           │
+│  • Power Out                │
+│  • Power On                 │
+│  • Internet Out             │
+│  • Internet On              │
+│  • Road Plowed              │
+│  • Road Blocked             │
+└──────────┬──────────────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│  Enter Address              │
+│  (Auto-geocoding)           │
+│  ┌────────────────────────┐ │
+│  │ "123 Main St"          │ │
+│  │ ✓ Location found       │ │
+│  └────────────────────────┘ │
+└──────────┬──────────────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│  Optional: Add Note         │
+│  Optional: Add Photo        │
+└──────────┬──────────────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│     Submit Report           │
+└──────────┬──────────────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│  NewReportViewModel         │
+│  • Geocode address          │
+│  • Create Report object     │
+│  • Calculate expiration     │
+│  • Submit to Firestore      │
+└──────────┬──────────────────┘
+           │
+           ▼
+┌─────────────────────────────┐
+│  Report appears on map      │
+└─────────────────────────────┘
+```
+
+## Report Interaction Flow
+
+```
+┌──────────────────┐
+│ Tap map marker   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────────┐
+│  ReportDetailCard            │
+│                              │
+│  🔴 Power Out                │
+│  123 Main St, Vail, CO       │
+│  ─────────────────────       │
+│  "Power out since 3pm"       │
+│  ⏰ 2 hours ago              │
+│  👤 John Doe                 │
+│  ─────────────────────       │
+│  ✅ 5  ❌ 1  📊 83%          │
+│  ─────────────────────       │
+│  [ ✓ Verify ]  [ ✗ Dispute ] │
+└──────────┬───────────────────┘
+           │
+      ┌────┴────┐
+      │         │
+      ▼         ▼
+ ┌─────────┐ ┌──────────┐
+ │ Verify  │ │ Dispute  │
+ └────┬────┘ └────┬─────┘
+      │           │
+      └─────┬─────┘
+            │
+            ▼
+   ┌─────────────────┐
+   │  Firestore      │
+   │  Transaction    │
+   │  • Update IDs   │
+   │  • Update count │
+   │  • Timestamp    │
+   └────────┬────────┘
+            │
+            ▼
+   ┌─────────────────┐
+   │  Refresh map    │
+   └─────────────────┘
+```
+
+## Profile Flow
+
+```
+┌──────────────────┐
+│ Tap Profile Icon │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────────────┐
+│     ProfileView          │
+│     (Sheet Modal)        │
+│                          │
+│  User Info:              │
+│  • Name                  │
+│  • Email                 │
+│  • Role                  │
+│                          │
+│  Activity:               │
+│  • Reports: 12           │
+│  • Verifications: 45     │
+│                          │
+│  [ 🚪 Sign Out ]         │
+└──────────┬───────────────┘
+           │
+    ┌──────┴──────┐
+    │             │
+    ▼             ▼
+┌────────┐    ┌───────────┐
+│ Done   │    │ Sign Out  │
+│ (Close)│    │ (Confirm) │
+└────────┘    └─────┬─────┘
+                    │
+                    ▼
+           ┌─────────────────┐
+           │ Firebase Sign Out│
+           └────────┬─────────┘
+                    │
+                    ▼
+           ┌─────────────────┐
+           │ Authentication   │
+           │      View        │
+           └──────────────────┘
+```
+
+## Data Flow
+
+```
+┌─────────────────────────────────────┐
+│         SwiftUI Views               │
+│  (MainMapView, NewReportView, etc)  │
+└──────────────┬──────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────┐
+│         View Models                 │
+│  (MapViewModel, NewReportViewModel) │
+│  • @Published properties            │
+│  • Business logic                   │
+└──────────────┬──────────────────────┘
+               │
+      ┌────────┴────────┐
+      │                 │
+      ▼                 ▼
+┌──────────┐    ┌───────────────┐
+│ Services │    │  Singleton    │
+│          │    │  Managers     │
+└────┬─────┘    └───────┬───────┘
+     │                  │
+     ▼                  ▼
+┌─────────────┐  ┌──────────────────┐
+│ Firestore   │  │ Authentication   │
+│  Service    │  │    Manager       │
+└──────┬──────┘  └────────┬─────────┘
+       │                  │
+       │                  │
+       ▼                  ▼
+┌─────────────┐  ┌──────────────────┐
+│  Geocoding  │  │   MapKit/        │
+│   Service   │  │   Location       │
+└──────┬──────┘  └────────┬─────────┘
+       │                  │
+       └─────────┬────────┘
+                 │
+                 ▼
+        ┌────────────────┐
+        │  Firebase/iOS  │
+        │   Backend      │
+        └────────────────┘
+```
+
+## Report Lifecycle
+
+```
+┌──────────────┐
+│ User Creates │
+│    Report    │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Status: active       │
+│ Created: now         │
+│ Expires: +6-24 hrs   │
+│ Verifications: 0     │
+│ Disputes: 0          │
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│  Community Sees      │
+│  Report on Map       │
+└──────┬───────────────┘
+       │
+   ┌───┴────┐
+   │        │
+   ▼        ▼
+┌────────┐ ┌─────────┐
+│ Verify │ │ Dispute │
+└───┬────┘ └────┬────┘
+    │           │
+    └─────┬─────┘
+          │
+          ▼
+┌──────────────────────┐
+│ Confidence Score     │
+│ Updates Dynamically  │
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│  Time Passes...      │
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Expires (automatic)  │
+│ OR                   │
+│ Moderator Hides      │
+└──────┬───────────────┘
+       │
+       ▼
+┌──────────────────────┐
+│ Removed from Map     │
+│ (Archived in DB)     │
+└──────────────────────┘
+```
+
+## Role-Based Features
+
+```
+┌─────────────────────────────────────┐
+│         Read Only User              │
+│  • View map                         │
+│  • See reports                      │
+│  • No submission                    │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│        General User                 │
+│  All Read Only features +           │
+│  • Submit reports                   │
+│  • Verify reports                   │
+│  • Dispute reports                  │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│          Moderator                  │
+│  All General features +             │
+│  • Hide reports                     │
+│  • View reporter info               │
+└─────────────────────────────────────┘
+
+┌─────────────────────────────────────┐
+│            Admin                    │
+│  All Moderator features +           │
+│  • Manage user roles (via Firestore)│
+│  • Configure community settings     │
+│  • View all analytics               │
+└─────────────────────────────────────┘
+```
+
+---
+
+This diagram shows the complete app flow from launch to report lifecycle.

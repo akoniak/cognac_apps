@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- REQUIRED: Google Sign-In OAuth redirect URL scheme (from GoogleService-Info.plist REVERSED_CLIENT_ID) -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>com.googleusercontent.apps.796649513175-r805fc06hei4b3qsrsv7kbmfldh9s2es</string>
+            </array>
+        </dict>
+    </array>
+
+    <!-- REQUIRED: Location permissions for map and geocoding -->
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>We need your location to show your position on the community map and help you report issues accurately.</string>
+    
+    <!-- REQUIRED: Photo library access for report images -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>We need access to your photos to attach images to status reports.</string>
+    
+    <!-- OPTIONAL: If you want to use camera directly in future -->
+    <key>NSCameraUsageDescription</key>
+    <string>We need camera access to take photos of issues you're reporting.</string>
+</dict>
+</plist>
