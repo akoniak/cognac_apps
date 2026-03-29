@@ -20,6 +20,11 @@ class AnnouncementManager: ObservableObject {
 
     @Published var lastUpdated: Date = Date()
 
+    /// Flips to true the first time Firestore delivers a value.
+    /// RootView observes this to trigger the launch dialog even when the
+    /// message hasn't changed from its initial default value.
+    @Published var hasReceivedFirstMessage = false
+
     private let dataService = AppDataService.shared
 
     /// Retains the Firestore listener so it stays active for the app lifetime.
@@ -36,6 +41,7 @@ class AnnouncementManager: ObservableObject {
             Task { @MainActor in
                 self?.message = announcement.message
                 self?.lastUpdated = announcement.lastUpdated
+                self?.hasReceivedFirstMessage = true
             }
         }
     }
