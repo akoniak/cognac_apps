@@ -17,14 +17,30 @@ class AnnouncementManager: ObservableObject {
     static let standardMessage = "Welcome to the Blue Lake Springs event tracker. Reports come from residents and may not always be accurate. Do not rely on this app for emergencies. If you are in danger, please call 911."
 
     @Published var message: String = AnnouncementManager.standardMessage
-    
+
     @Published var lastUpdated: Date = Date()
-    
+
     private let dataService = AppDataService.shared
-    
+
+    /// Retains the Firestore listener so it stays active for the app lifetime.
+    private var listenerToken: AnyObject?
+
     private init() {}
-    
-    /// Load the latest announcement from data service
+
+    /// Attaches a real-time Firestore listener so the announcement updates
+    /// automatically on all devices whenever an admin saves a change.
+    /// Safe to call multiple times — only one listener is ever attached.
+    func startListening() {
+        guard listenerToken == nil else { return }
+        listenerToken = dataService.startListeningToAnnouncement { [weak self] announcement in
+            Task { @MainActor in
+                self?.message = announcement.message
+                self?.lastUpdated = announcement.lastUpdated
+            }
+        }
+    }
+
+    /// One-time fetch — kept for use in the admin editor to reload the draft.
     func loadLatestAnnouncement() async {
         do {
             let announcement = try await dataService.fetchAnnouncement()

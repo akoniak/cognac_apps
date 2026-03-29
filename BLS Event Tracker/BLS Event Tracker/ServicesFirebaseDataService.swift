@@ -621,6 +621,18 @@ class FirebaseDataService {
         ])
     }
 
+    /// Attaches a real-time Firestore listener to the announcement document.
+    /// The callback is invoked immediately with the current value and again
+    /// whenever an admin saves a new announcement on any device.
+    func startListeningToAnnouncement(onUpdate: @escaping (Announcement) -> Void) -> ListenerRegistration {
+        announcementRef.addSnapshotListener { snapshot, error in
+            guard let data = snapshot?.data(),
+                  let message = data["message"] as? String else { return }
+            let timestamp = (data["last_updated"] as? Timestamp)?.dateValue() ?? Date()
+            onUpdate(Announcement(message: message, lastUpdated: timestamp))
+        }
+    }
+
     // MARK: - Private Helpers
 
     /// Fetches the communityID for a report by doing a collection group query.

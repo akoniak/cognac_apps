@@ -10,7 +10,8 @@ import SwiftUI
 struct RootView: View {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var announcementManager = AnnouncementManager.shared
-    @AppStorage("hasSeenWelcome") private var hasSeenWelcome = false
+    /// Stores the last message the user acknowledged so we can detect changes.
+    @AppStorage("lastSeenAnnouncementMessage") private var lastSeenMessage = ""
     @State private var showWelcome = false
 
     private var welcomeMessage: String {
@@ -37,22 +38,22 @@ struct RootView: View {
         }
         .alert("BLS Community Powered Status", isPresented: $showWelcome) {
             Button("I Understand", role: .none) {
-                // Keep hasSeenWelcome for future settings toggle
-                hasSeenWelcome = true
+                lastSeenMessage = announcementManager.message
             }
         } message: {
             Text(welcomeMessage)
         }
-        .onAppear {
-            // Show welcome dialog every time the app launches
-            // (Can be disabled in settings once that feature is added)
-            // Delay slightly to ensure the view is ready
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+        .task {
+            announcementManager.startListening()
+        }
+        .onChange(of: announcementManager.message) { _, newMessage in
+            // Show the dialog when the message differs from what the user last acknowledged.
+            // Exception: if the user has seen a message before and the new message is the
+            // standard default, treat it as a silent reset — no dialog needed.
+            let isReset = !lastSeenMessage.isEmpty && newMessage == AnnouncementManager.standardMessage
+            if newMessage != lastSeenMessage && !isReset {
                 showWelcome = true
             }
-        }
-        .task {
-            await announcementManager.loadLatestAnnouncement()
         }
     }
 }

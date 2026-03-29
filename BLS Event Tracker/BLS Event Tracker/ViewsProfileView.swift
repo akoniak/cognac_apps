@@ -88,6 +88,7 @@ struct ProfileView: View {
     @State private var announcementDraft = ""
     @State private var announcementSaving = false
     @State private var announcementSaved = false
+    @State private var announcementSaveError: String? = nil
     @FocusState private var announcementFocused: Bool
 
     // Admin - templates
@@ -216,11 +217,16 @@ struct ProfileView: View {
                                         announcementFocused = false
                                         Task {
                                             announcementSaving = true
-                                            try? await announcementManager.updateAnnouncement(message: announcementDraft)
+                                            announcementSaveError = nil
+                                            do {
+                                                try await announcementManager.updateAnnouncement(message: announcementDraft)
+                                                announcementSaved = true
+                                                try? await Task.sleep(for: .seconds(2))
+                                                announcementSaved = false
+                                            } catch {
+                                                announcementSaveError = "Save failed: \(error.localizedDescription)"
+                                            }
                                             announcementSaving = false
-                                            announcementSaved = true
-                                            try? await Task.sleep(for: .seconds(2))
-                                            announcementSaved = false
                                         }
                                     } label: {
                                         if announcementSaving {
@@ -235,6 +241,12 @@ struct ProfileView: View {
                             }
                         }
                         .padding(.vertical, 4)
+
+                        if let error = announcementSaveError {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
                     }
 
                     // Clear reports

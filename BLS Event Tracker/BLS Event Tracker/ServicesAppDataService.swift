@@ -218,4 +218,12 @@ class AppDataService {
             try await firebase.updateAnnouncement(announcement)
         }
     }
+
+    /// Attaches a real-time listener to the announcement document.
+    /// Returns a registration token — call `.remove()` on it to stop listening.
+    /// In mock mode this is a no-op and returns nil.
+    func startListeningToAnnouncement(onUpdate: @escaping (Announcement) -> Void) -> AnyObject? {
+        guard !useMockData else { return nil }
+        return firebase.startListeningToAnnouncement(onUpdate: onUpdate)
+    }
 }
