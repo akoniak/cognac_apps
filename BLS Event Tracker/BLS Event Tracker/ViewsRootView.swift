@@ -55,6 +55,7 @@ struct RootView: View {
                     }
                     .task {
                         announcementManager.startListening()
+                        await NotificationManager.shared.requestPermission()
                     }
                     .onChange(of: announcementManager.hasReceivedFirstMessage) { _, received in
                         if received {

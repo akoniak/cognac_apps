@@ -39,9 +39,16 @@ class AnnouncementManager: ObservableObject {
         guard listenerToken == nil else { return }
         listenerToken = dataService.startListeningToAnnouncement { [weak self] announcement in
             Task { @MainActor in
+                let isFirstDelivery = self?.hasReceivedFirstMessage == false
                 self?.message = announcement.message
                 self?.lastUpdated = announcement.lastUpdated
                 self?.hasReceivedFirstMessage = true
+
+                // On live changes (not the initial load), post a local notification
+                // so backgrounded users are alerted without needing a server.
+                if !isFirstDelivery {
+                    NotificationManager.shared.scheduleAnnouncementNotification(message: announcement.message)
+                }
             }
         }
     }
