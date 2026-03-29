@@ -80,6 +80,9 @@ struct ProfileView: View {
     @StateObject private var announcementManager = AnnouncementManager.shared
     @StateObject private var templateStore = AnnouncementTemplateStore.shared
     @State private var showSignOutConfirmation = false
+    @State private var showDeleteAccountConfirmation = false
+    @State private var deleteAccountInProgress = false
+    @State private var deleteAccountError: String? = nil
 
     // Admin - announcement
     @State private var announcementDraft = ""
@@ -312,12 +315,32 @@ struct ProfileView: View {
                     }
                 }
 
-                // Sign out
+                // Sign out / account removal
                 Section {
                     Button(role: .destructive) {
                         showSignOutConfirmation = true
                     } label: {
                         Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+
+                    if deleteAccountInProgress {
+                        HStack {
+                            ProgressView()
+                            Text("Deleting account…")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Button(role: .destructive) {
+                            showDeleteAccountConfirmation = true
+                        } label: {
+                            Label("Delete Account", systemImage: "person.crop.circle.badge.minus")
+                        }
+                    }
+
+                    if let error = deleteAccountError {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
                 }
             }
@@ -352,6 +375,23 @@ struct ProfileView: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Are you sure you want to sign out?")
+            }
+            .alert("Delete Account?", isPresented: $showDeleteAccountConfirmation) {
+                Button("Delete My Account", role: .destructive) {
+                    Task {
+                        deleteAccountInProgress = true
+                        deleteAccountError = nil
+                        do {
+                            try await authManager.deleteAccount()
+                        } catch {
+                            deleteAccountError = error.localizedDescription
+                        }
+                        deleteAccountInProgress = false
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete your account and profile data. Submitted reports may remain anonymized. This cannot be undone.")
             }
         }
     }

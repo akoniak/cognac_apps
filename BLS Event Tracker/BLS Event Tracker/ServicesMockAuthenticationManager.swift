@@ -435,6 +435,35 @@ class AuthenticationManager: ObservableObject {
             // Auth state listener sets isAuthenticated = false
         }
     }
+
+    // MARK: - Delete Account
+
+    /// Deletes the user's Firestore profile document and Firebase Auth account,
+    /// then clears local auth state. Firebase requires a recent sign-in to delete
+    /// an account; if the credential is stale this will throw an error that the
+    /// caller should surface to the user.
+    func deleteAccount() async throws {
+        guard !useMockData else {
+            user = nil
+            userProfile = nil
+            isAuthenticated = false
+            return
+        }
+        guard let firebaseUser = Auth.auth().currentUser,
+              let userID = user?.uid else {
+            throw AuthError.invalidCredential
+        }
+        // Delete Firestore profile first so Firestore security rules still
+        // allow the write while the Auth account exists.
+        try await AppDataService.shared.deleteUserProfile(userID: userID)
+        // Delete the Firebase Auth account.
+        try await firebaseUser.delete()
+        // Auth state listener will fire and clear isAuthenticated,
+        // but clear local state immediately for a responsive UI.
+        user = nil
+        userProfile = nil
+        isAuthenticated = false
+    }
 }
 
 // MARK: - Apple Sign-In Delegate

@@ -168,6 +168,10 @@ class FirebaseDataService {
         try await userProfilesRef().document(userID).setData(data, merge: true)
     }
 
+    func deleteUserProfile(userID: String) async throws {
+        try await userProfilesRef().document(userID).delete()
+    }
+
     // MARK: - Report Operations
 
     func fetchReports(for communityID: String, includeExpired: Bool = false) async throws -> [Report] {
