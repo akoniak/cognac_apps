@@ -28,6 +28,7 @@ struct ReportDetailCard: View {
     @State private var isProcessing = false
     @State private var confirmationMessage: String? = nil
     @State private var deleteErrorMessage: String? = nil
+    @State private var showReportIssueSheet = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -399,12 +400,28 @@ struct ReportDetailCard: View {
                     }
                 }
             }
+
+            // Report Issue link — only shown for other users' reports (App Store UGC compliance)
+            if !isOwnReport {
+                Button {
+                    showReportIssueSheet = true
+                } label: {
+                    Text("Report Issue")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding()
         .background(.regularMaterial)
         .cornerRadius(16)
         .shadow(radius: 8)
         .padding()
+        .sheet(isPresented: $showReportIssueSheet) {
+            ReportIssueSheet(report: report)
+        }
     }
     
     private var statusColor: Color {
@@ -436,6 +453,116 @@ struct ReportDetailCard: View {
     private var userHasDisputed: Bool {
         guard let userID = authManager.user?.uid else { return false }
         return report.disputedByUserIDs.contains(userID)
+    }
+}
+
+// MARK: - Report Issue Sheet
+
+struct ReportIssueSheet: View {
+    let report: Report
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedReason = IssueReason.inaccurate
+    @State private var note = ""
+    @State private var isSubmitting = false
+    @State private var submitted = false
+    @State private var submitError: String? = nil
+
+    enum IssueReason: String, CaseIterable {
+        case inaccurate = "Inaccurate information"
+        case duplicate = "Spam or duplicate"
+        case inappropriate = "Inappropriate content"
+        case other = "Other"
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Reason") {
+                    Picker("Reason", selection: $selectedReason) {
+                        ForEach(IssueReason.allCases, id: \.self) { reason in
+                            Text(reason.rawValue).tag(reason)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+
+                Section("Additional details (optional)") {
+                    TextField("Add a note…", text: $note, axis: .vertical)
+                        .lineLimit(3...5)
+                }
+
+                if let error = submitError {
+                    Section {
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                    }
+                }
+            }
+            .navigationTitle("Report Issue")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Submit") {
+                        Task { await submit() }
+                    }
+                    .disabled(isSubmitting || submitted)
+                }
+            }
+            .overlay {
+                if submitted {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.green)
+                        Text("Report Submitted")
+                            .font(.headline)
+                        Text("Thank you for helping keep the community accurate.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(.regularMaterial)
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func submit() async {
+        guard let userID = AuthenticationManager.shared.user?.uid else {
+            submitError = "User not signed in. Please try again."
+            return
+        }
+        isSubmitting = true
+        submitError = nil
+        let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await AppDataService.shared.submitIssueReport(
+                reportID: report.id,
+                communityID: report.communityID,
+                category: report.category.rawValue,
+                address: report.address,
+                authorID: report.authorID,
+                reportedByUserID: userID,
+                reason: selectedReason.rawValue,
+                note: trimmedNote.isEmpty ? nil : trimmedNote
+            )
+            isSubmitting = false
+            submitted = true
+            try? await Task.sleep(for: .seconds(1.5))
+            dismiss()
+        } catch {
+            isSubmitting = false
+            submitError = "Failed to submit: \(error.localizedDescription)"
+            print("⚠️ ReportIssueSheet submit error: \(error)")
+        }
     }
 }
 

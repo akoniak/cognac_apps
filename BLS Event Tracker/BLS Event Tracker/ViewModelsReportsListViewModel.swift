@@ -18,6 +18,8 @@ class ReportsListViewModel: ObservableObject {
     
     private let dataService = AppDataService.shared
     private let authManager = AuthenticationManager.shared
+    /// Opaque token identifying this view model's listener registration.
+    private var listenerToken: UUID?
     
     var filteredReports: [Report] {
         let filtered = reports.filter { report in
@@ -29,13 +31,15 @@ class ReportsListViewModel: ObservableObject {
     // MARK: - Listener lifecycle
 
     func startListening(for communityID: String) {
-        dataService.startListeningToReports(for: communityID) { [weak self] updatedReports in
+        stopListening()
+        listenerToken = dataService.startListeningToReports(for: communityID) { [weak self] updatedReports in
             self?.reports = updatedReports
         }
     }
 
     func stopListening() {
-        dataService.stopListeningToReports()
+        dataService.stopListeningToReports(token: listenerToken)
+        listenerToken = nil
     }
 
     // MARK: - Load

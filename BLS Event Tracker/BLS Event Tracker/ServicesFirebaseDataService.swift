@@ -23,25 +23,26 @@ class FirebaseDataService {
     /// The community currently being listened to.
     private var listeningCommunityID: String?
     /// Callbacks invoked whenever Firestore pushes a new snapshot.
-    /// Multiple subscribers (e.g. MapViewModel + ReportsListViewModel) are all notified.
-    private var reportsUpdateCallbacks: [([Report]) -> Void] = []
+    /// Keyed by an opaque UUID token returned to each subscriber, so individual
+    /// callbacks can be removed without affecting other subscribers.
+    private var reportsUpdateCallbacks: [UUID: ([Report]) -> Void] = [:]
     /// The most recent snapshot delivered to subscribers, so late-registering
     /// subscribers receive data immediately without waiting for the next push.
     private var lastKnownReports: [Report] = []
-    /// Number of active subscribers — listener is kept alive as long as this is > 0.
-    private var subscriberCount = 0
 
     private init() {}
 
     // MARK: - Real-time listener
 
     /// Registers a callback and ensures the Firestore listener is running for the given community.
-    /// Multiple callers can each register their own callback — all are notified on every update.
+    /// Returns an opaque token that must be passed to stopListeningToReports to remove this
+    /// specific callback. Multiple callers can each register their own callback — all are notified.
     /// If reports are already cached the new callback is called immediately with current data.
     /// Calling with a different communityID tears down the existing listener and re-attaches.
-    func startListeningToReports(for communityID: String, onUpdate: @escaping ([Report]) -> Void) {
-        subscriberCount += 1
-        reportsUpdateCallbacks.append(onUpdate)
+    @discardableResult
+    func startListeningToReports(for communityID: String, onUpdate: @escaping ([Report]) -> Void) -> UUID {
+        let token = UUID()
+        reportsUpdateCallbacks[token] = onUpdate
 
         // If we're already listening to this community, deliver the cached snapshot
         // immediately so the new subscriber doesn't show an empty list while waiting
@@ -50,7 +51,7 @@ class FirebaseDataService {
             if !lastKnownReports.isEmpty {
                 onUpdate(lastKnownReports)
             }
-            return
+            return token
         }
 
         // New community — tear down old listener and start fresh
@@ -77,20 +78,21 @@ class FirebaseDataService {
             // Firestore calls this on an arbitrary thread; dispatch to main
             DispatchQueue.main.async {
                 self.lastKnownReports = reports
-                self.reportsUpdateCallbacks.forEach { $0(reports) }
+                self.reportsUpdateCallbacks.values.forEach { $0(reports) }
             }
         }
+        return token
     }
 
-    /// Removes one subscriber. The listener is only torn down when all subscribers have stopped.
-    func stopListeningToReports() {
-        subscriberCount = max(0, subscriberCount - 1)
-        guard subscriberCount == 0 else { return }
+    /// Removes the callback associated with the given token.
+    /// The Firestore listener is torn down only when no subscribers remain.
+    func stopListeningToReports(token: UUID) {
+        reportsUpdateCallbacks.removeValue(forKey: token)
+        guard reportsUpdateCallbacks.isEmpty else { return }
         reportsListenerRegistration?.remove()
         reportsListenerRegistration = nil
         listeningCommunityID = nil
         lastKnownReports = []
-        reportsUpdateCallbacks.removeAll()
     }
 
     // MARK: - Collection paths
@@ -417,7 +419,7 @@ class FirebaseDataService {
             verified.removeAll { $0 == userID }
             if !wasAlreadyDisputing { disputed.append(userID) }
 
-            // Build only the changed report fields
+            // Build the report fields — we add to this dict before the single write.
             var reportUpdates: [String: Any] = [
                 "disputed_by_user_ids": disputed,
                 "verified_by_user_ids": verified,
@@ -427,13 +429,6 @@ class FirebaseDataService {
             ]
             if disputed.count > verified.count && disputed.count >= 3 {
                 reportUpdates["status"] = "disputed"
-            }
-            transaction.updateData(reportUpdates, forDocument: reportRef)
-
-            // Increment voter's verification_count for a new dispute action
-            if !wasAlreadyDisputing {
-                let vc = voterSnap.data()?["verification_count"] as? Int ?? 0
-                transaction.updateData(["verification_count": vc + 1], forDocument: voterRef)
             }
 
             // Revoke the author's credit if this user flipped from verify→dispute,
@@ -462,9 +457,17 @@ class FirebaseDataService {
                 }
                 transaction.updateData(authorUpdates, forDocument: authorRef)
 
-                // Keep the report ledger in sync
+                // Include the ledger update in the same report write
                 reportUpdates["author_reputation_earned"] = newEarned
-                transaction.updateData(reportUpdates, forDocument: reportRef)
+            }
+
+            // Single write for all report updates
+            transaction.updateData(reportUpdates, forDocument: reportRef)
+
+            // Increment voter's verification_count for a new dispute action
+            if !wasAlreadyDisputing {
+                let vc = voterSnap.data()?["verification_count"] as? Int ?? 0
+                transaction.updateData(["verification_count": vc + 1], forDocument: voterRef)
             }
 
             return nil
@@ -549,7 +552,7 @@ class FirebaseDataService {
 
         // Update local cache immediately
         lastKnownReports.removeAll { $0.id == reportID }
-        reportsUpdateCallbacks.forEach { $0(lastKnownReports) }
+        reportsUpdateCallbacks.values.forEach { $0(lastKnownReports) }
     }
 
     /// Marks a power outage report as resolved (power has been restored).
@@ -567,6 +570,28 @@ class FirebaseDataService {
         try await resolverRef.updateData([
             "verification_count": FieldValue.increment(Int64(1))
         ])
+    }
+
+    /// Writes a user-submitted issue flag to the top-level `issue_reports` collection.
+    /// Admins can review these in the Firebase console; no email is sent.
+    /// reportID is optional — if nil, the report is still identifiable via the other fields.
+    func submitIssueReport(reportID: String?, communityID: String, category: String, address: String, authorID: String, reportedByUserID: String, reason: String, note: String?) async throws {
+        var data: [String: Any] = [
+            "community_id": communityID,
+            "category": category,
+            "address": address,
+            "author_id": authorID,
+            "reported_by_user_id": reportedByUserID,
+            "reason": reason,
+            "created_at": Timestamp(date: Date())
+        ]
+        if let reportID {
+            data["report_id"] = reportID
+        }
+        if let note, !note.isEmpty {
+            data["note"] = note
+        }
+        try await db.collection("issue_reports").addDocument(data: data)
     }
 
     func hideReport(reportID: String, communityID: String, moderatorID: String, reason: String) async throws {
@@ -588,7 +613,7 @@ class FirebaseDataService {
         }
         // Clear stale cache entries — the listener will repopulate with remaining reports.
         lastKnownReports = lastKnownReports.filter { $0.createdAt >= date }
-        reportsUpdateCallbacks.forEach { $0(lastKnownReports) }
+        reportsUpdateCallbacks.values.forEach { $0(lastKnownReports) }
     }
 
     func deleteAllReports(in communityID: String) async throws {
@@ -599,7 +624,7 @@ class FirebaseDataService {
         // Immediately clear the cache and push an empty list to all subscribers
         // so the map and activity list update without waiting for the next listener push.
         lastKnownReports = []
-        reportsUpdateCallbacks.forEach { $0([]) }
+        reportsUpdateCallbacks.values.forEach { $0([]) }
     }
 
     // MARK: - Announcement Operations

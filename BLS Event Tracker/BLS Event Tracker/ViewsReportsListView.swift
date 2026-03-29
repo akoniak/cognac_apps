@@ -186,6 +186,7 @@ struct ReportRowView: View {
     let onDelete: (() async -> Void)?
     @State private var isExpanded = false
     @State private var isDeleting = false
+    @State private var showReportIssueSheet = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -367,6 +368,22 @@ struct ReportRowView: View {
                                 .cornerRadius(8)
                             }
                             .disabled(isDeleting)
+                        }
+
+                        // Report Issue link — only shown for other users' reports (App Store UGC compliance)
+                        if !isOwnReport {
+                            Button {
+                                showReportIssueSheet = true
+                            } label: {
+                                Text("Report Issue")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.plain)
+                            .sheet(isPresented: $showReportIssueSheet) {
+                                ReportIssueSheet(report: report)
+                            }
                         }
                     }
                     .padding(.horizontal, 12)

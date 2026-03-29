@@ -31,6 +31,8 @@ class MapViewModel: ObservableObject {
     private let authManager = AuthenticationManager.shared
     /// Timestamp of the last manual refresh, used to enforce the 60-second cooldown.
     private var lastManualRefresh: Date?
+    /// Opaque token identifying this view model's listener registration.
+    private var listenerToken: UUID?
     
     var filteredReports: [Report] {
         // Filter reports by category
@@ -74,18 +76,20 @@ class MapViewModel: ObservableObject {
     // MARK: - Listener lifecycle
 
     /// Starts the real-time Firestore listener for the given community.
-    /// Safe to call multiple times — the service ignores duplicate community IDs.
+    /// Stops any existing registration first so re-entrant calls don't accumulate callbacks.
     func startListening(for communityID: String) {
-        dataService.startListeningToReports(for: communityID) { [weak self] updatedReports in
+        stopListening()
+        listenerToken = dataService.startListeningToReports(for: communityID) { [weak self] updatedReports in
             guard let self else { return }
             self.reports = updatedReports
             self.updateRoadStatuses()
         }
     }
 
-    /// Tears down the listener (called when the view disappears or user logs out).
+    /// Tears down this view model's listener registration.
     func stopListening() {
-        dataService.stopListeningToReports()
+        dataService.stopListeningToReports(token: listenerToken)
+        listenerToken = nil
     }
 
     // MARK: - Report loading

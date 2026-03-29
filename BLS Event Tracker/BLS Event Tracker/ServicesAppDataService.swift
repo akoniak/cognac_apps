@@ -93,17 +93,27 @@ class AppDataService {
     // MARK: - Real-time listener
 
     /// Starts a Firestore real-time listener for reports in the given community.
-    /// In mock mode this is a no-op (mock data is already in-memory).
-    /// - Parameter onUpdate: Called on the main thread whenever the report list changes.
-    func startListeningToReports(for communityID: String, onUpdate: @escaping ([Report]) -> Void) {
-        guard !useMockData else { return }
-        firebase.startListeningToReports(for: communityID, onUpdate: onUpdate)
+    /// Returns an opaque token that must be passed to stopListeningToReports.
+    /// In mock mode this is a no-op and returns nil.
+    @discardableResult
+    func startListeningToReports(for communityID: String, onUpdate: @escaping ([Report]) -> Void) -> UUID? {
+        guard !useMockData else { return nil }
+        return firebase.startListeningToReports(for: communityID, onUpdate: onUpdate)
     }
 
-    /// Stops the active Firestore reports listener.
-    func stopListeningToReports() {
+    /// Removes the callback associated with the given token.
+    /// Pass nil (mock mode) and the call is a no-op.
+    func stopListeningToReports(token: UUID?) {
+        guard !useMockData, let token else { return }
+        firebase.stopListeningToReports(token: token)
+    }
+
+    // MARK: - Issue Reports
+
+    /// Submits a user issue flag for a report. No-op in mock mode.
+    func submitIssueReport(reportID: String?, communityID: String, category: String, address: String, authorID: String, reportedByUserID: String, reason: String, note: String?) async throws {
         guard !useMockData else { return }
-        firebase.stopListeningToReports()
+        try await firebase.submitIssueReport(reportID: reportID, communityID: communityID, category: category, address: address, authorID: authorID, reportedByUserID: reportedByUserID, reason: reason, note: note)
     }
 
     // MARK: - Reports

@@ -52,6 +52,10 @@ class AuthenticationManager: ObservableObject {
 
     /// Nonce used to validate the Apple ID token — generated fresh for each sign-in attempt.
     private var currentAppleNonce: String?
+    /// Display name supplied during email/password sign-up, held so that
+    /// loadOrCreateUserProfile can use it before Firebase Auth propagates
+    /// the name from commitChanges() — preventing the email-as-display-name fallback.
+    private var pendingSignUpDisplayName: String?
 
     static let shared = AuthenticationManager()
 
@@ -145,10 +149,15 @@ class AuthenticationManager: ObservableObject {
                 return
             }
 
+            // Prefer the name captured at sign-up time; fall back to the Firebase Auth
+            // profile name (set by Google/Apple SSO), then email, then a generic placeholder.
+            let resolvedDisplayName = pendingSignUpDisplayName ?? appUser.displayName ?? appUser.email ?? "User"
+            pendingSignUpDisplayName = nil
+
             let newProfile = UserProfile(
                 id: appUser.uid,
                 email: appUser.email,
-                displayName: appUser.displayName ?? appUser.email ?? "User",
+                displayName: resolvedDisplayName,
                 communityID: communityID,
                 role: .general,
                 createdAt: Date(),
@@ -234,16 +243,17 @@ class AuthenticationManager: ObservableObject {
             autoLoginMockUser()
         } else {
             do {
+                // Store the name before createUser so the auth state listener can use it
+                // immediately — Firebase Auth won't have the displayName until after
+                // commitChanges(), causing the listener to fall back to the email otherwise.
+                pendingSignUpDisplayName = displayName
                 let result = try await Auth.auth().createUser(withEmail: email, password: password)
-                // Set the display name on the Firebase profile
+                // Also persist the name to the Firebase Auth profile for completeness
                 let changeRequest = result.user.createProfileChangeRequest()
                 changeRequest.displayName = displayName
                 try await changeRequest.commitChanges()
-                // Reload so the auth state listener fires with the updated displayName,
-                // ensuring the provisioned profile uses the name the user entered rather
-                // than falling back to their email address.
-                try await result.user.reload()
             } catch {
+                pendingSignUpDisplayName = nil
                 errorMessage = error.localizedDescription
                 throw error
             }
