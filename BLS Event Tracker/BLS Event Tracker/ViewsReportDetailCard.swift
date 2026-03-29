@@ -310,6 +310,49 @@ struct ReportDetailCard: View {
                                 .cornerRadius(10)
                         }
                         .disabled(isProcessing || userHasDisputed)
+                    } else if report.category == .roadPlowed {
+                        // Road Plowed: situational labels matching Power/Road Blocked style
+                        HStack(spacing: 12) {
+                            Button {
+                                Task {
+                                    isProcessing = true
+                                    await onVerify()
+                                    isProcessing = false
+                                    confirmationMessage = "Confirmed — Still Plowed (Thank you!)"
+                                    try? await Task.sleep(for: .seconds(2))
+                                    onDismiss()
+                                }
+                            } label: {
+                                Label("Still Plowed", systemImage: "hand.thumbsup")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(userHasVerified ? Color.green.opacity(0.2) : Color.green)
+                                    .foregroundStyle(userHasVerified ? .green : .white)
+                                    .cornerRadius(10)
+                            }
+                            .disabled(isProcessing || userHasVerified)
+
+                            Button {
+                                Task {
+                                    isProcessing = true
+                                    await onDispute()
+                                    isProcessing = false
+                                    confirmationMessage = "Marked Inaccurate (Thank you!)"
+                                    try? await Task.sleep(for: .seconds(2))
+                                    onDismiss()
+                                }
+                            } label: {
+                                Label("Not Plowed", systemImage: "hand.thumbsdown")
+                                    .font(.subheadline.weight(.semibold))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(userHasDisputed ? Color.red.opacity(0.2) : Color.red)
+                                    .foregroundStyle(userHasDisputed ? .red : .white)
+                                    .cornerRadius(10)
+                            }
+                            .disabled(isProcessing || userHasDisputed)
+                        }
                     } else {
                         // All other reports: standard 2-button layout
                         HStack(spacing: 12) {

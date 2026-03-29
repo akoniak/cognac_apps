@@ -50,10 +50,6 @@ struct UserProfile: Codable, Identifiable {
     var communityID: String
     var role: UserRole
     
-    // Profile info
-    var address: String? // User's home address (optional)
-    var phoneNumber: String?
-    
     // Metadata
     var createdAt: Date
     var lastActiveAt: Date
@@ -110,8 +106,6 @@ struct UserProfile: Codable, Identifiable {
         case displayName = "display_name"
         case communityID = "community_id"
         case role
-        case address
-        case phoneNumber = "phone_number"
         case createdAt = "created_at"
         case lastActiveAt = "last_active_at"
         case isActive = "is_active"
