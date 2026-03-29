@@ -26,7 +26,7 @@ Podfile.lock
 Thumbs.db
 
 # Sensitive / secret files
-BLS Event Tracker/GoogleService-Info.plist
+GoogleService-Info.plist
 
 # Fastlane (if ever used)
 fastlane/report.xml
