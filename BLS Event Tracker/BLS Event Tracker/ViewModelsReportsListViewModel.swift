@@ -34,6 +34,13 @@ class ReportsListViewModel: ObservableObject {
         stopListening()
         listenerToken = dataService.startListeningToReports(for: communityID) { [weak self] updatedReports in
             self?.reports = updatedReports
+            // Update activity badge with the current set of report IDs.
+            let ids = Set(updatedReports.compactMap(\.id))
+            NotificationManager.shared.updateNewReportsBadge(currentIDs: ids)
+            // Check whether any of the current user's reports were verified or disputed.
+            if let userID = AuthenticationManager.shared.user?.uid {
+                NotificationManager.shared.checkReputationChanges(in: updatedReports, currentUserID: userID)
+            }
         }
     }
 

@@ -45,9 +45,9 @@ class AnnouncementManager: ObservableObject {
                 self?.hasReceivedFirstMessage = true
 
                 // On live changes (not the initial load), post a local notification
-                // so backgrounded users are alerted without needing a server.
+                // and set the account badge so users are alerted without needing a server.
                 if !isFirstDelivery {
-                    NotificationManager.shared.scheduleAnnouncementNotification(message: announcement.message)
+                    NotificationManager.shared.handleAnnouncementChange(message: announcement.message)
                 }
             }
         }

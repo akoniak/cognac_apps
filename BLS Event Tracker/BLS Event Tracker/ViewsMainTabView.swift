@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MainTabView: View {
     @StateObject private var navigationCoordinator = NavigationCoordinator()
+    @ObservedObject private var notificationManager = NotificationManager.shared
     @State private var selectedTab = 0
     @State private var showNewReport = false
     @State private var isReportCardVisible = false
@@ -28,6 +29,7 @@ struct MainTabView: View {
                     .tabItem {
                         Label("Activity", systemImage: "list.bullet")
                     }
+                    .badge(notificationManager.activityBadgeCount)
                     .tag(1)
                 
                 // Profile View
@@ -35,6 +37,7 @@ struct MainTabView: View {
                     .tabItem {
                         Label("Account", systemImage: "person.circle.fill")
                     }
+                    .badge(notificationManager.accountBadgeCount)
                     .tag(2)
             }
             .environmentObject(navigationCoordinator)
@@ -63,6 +66,13 @@ struct MainTabView: View {
         }
         .sheet(isPresented: $showNewReport) {
             NewReportView()
+        }
+        .onChange(of: selectedTab) { _, tab in
+            switch tab {
+            case 1: NotificationManager.shared.clearActivityBadge()
+            case 2: NotificationManager.shared.clearReputationBadge()
+            default: break
+            }
         }
         .onChange(of: navigationCoordinator.shouldShowOnMap) { _, shouldShow in
             if shouldShow {

@@ -20,6 +20,7 @@ struct RootView: View {
     private func checkAnnouncement(_ message: String) {
         if message != lastSeenMessage {
             showWelcome = true
+            NotificationManager.shared.markAnnouncementPending()
         }
     }
 
@@ -40,6 +41,7 @@ struct RootView: View {
                     .alert("BLS Community Powered Status", isPresented: $showWelcome) {
                         Button("I Understand", role: .none) {
                             lastSeenMessage = announcementManager.message
+                            NotificationManager.shared.clearAnnouncementBadge()
                             // Request permission after the announcement is dismissed
                             // so the two system dialogs don't compete on first launch.
                             Task { await NotificationManager.shared.requestPermission() }
