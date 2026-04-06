@@ -203,10 +203,8 @@ extension Report {
             return .trustedReporter
         }
 
-        // Verified: at least 2 independent confirmations and zero disputes.
-        // Requiring 2 makes a single confirmation insufficient for the green badge,
-        // which was too easy to produce (including via self-corroboration edge cases).
-        if verificationCount >= 2 && disputeCount == 0 {
+        // Verified: at least 1 community confirmation and zero disputes.
+        if verificationCount >= 1 && disputeCount == 0 {
             return .verified
         }
 
@@ -215,8 +213,7 @@ extension Report {
             return .mixed
         }
 
-        // Unconfirmed: no verifications, or only disputes, or exactly 1 verification
-        // (not yet enough to earn the green badge)
+        // Unconfirmed: no verifications yet, or has disputes with no verifications
         return .unconfirmed
     }
 }

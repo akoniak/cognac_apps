@@ -82,6 +82,12 @@ class MapViewModel: ObservableObject {
         listenerToken = dataService.startListeningToReports(for: communityID) { [weak self] updatedReports in
             guard let self else { return }
             self.reports = updatedReports
+            // Keep the open detail card in sync so its confidence badge reflects live changes
+            // (e.g. another user verifying or disputing while this card is visible).
+            if let selected = self.selectedReport,
+               let updated = updatedReports.first(where: { $0.id == selected.id }) {
+                self.selectedReport = updated
+            }
             self.updateRoadStatuses()
         }
     }
