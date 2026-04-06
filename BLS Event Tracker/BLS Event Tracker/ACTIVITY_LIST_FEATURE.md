@@ -47,20 +47,20 @@ Each report shows:
 ┌─────────────────────────────────────────┐
 │ Blue Lake Springs - Status         👤  │
 │                                         │
-│ [All] [Power] [Internet] [Roads]       │ ← Filter chips
+│ [All] [Power] [Roads]       │ ← Filter chips
 │                                         │
 │ 3 Reports          📊 Most Recent ▾    │ ← Count & sort
 ├─────────────────────────────────────────┤
 │ ┌─────────────────────────────────────┐ │
 │ │ 🔴 Power Out          🛡️ 83%       │ │
 │ │ 2h ago                              │ │
-│ │ 📍 571 Mauna Kea Dr                 │ │
+│ │ 📍 Mauna Kea Dr                 │ │
 │ │ "Power out since 3pm"               │ │
 │ │ ✅ 5  ❌ 1        by User 1          │ │
 │ └─────────────────────────────────────┘ │
 │                                         │
 │ ┌─────────────────────────────────────┐ │
-│ │ 🟡 Internet Out       🛡️ 67%       │ │
+│ │ 🟡 Road Blocked       🛡️ 67%       │ │
 │ │ 3h ago                              │ │
 │ │ 📍 Blue Lake Springs Dr             │ │
 │ │ ✅ 4  ❌ 2        by User 2          │ │
@@ -137,9 +137,8 @@ Oldest reports appear first
 
 ### **By Category:**
 Groups reports by type:
-1. Internet reports
-2. Power reports
-3. Road reports
+1. Power reports
+2. Road reports
 
 Within each group, sorted by newest first.
 
@@ -152,8 +151,8 @@ Reports with highest confidence (verification %) first
 ## 🎨 Color Coding
 
 ### **Category Colors:**
-- **Red** - Problems (power out, internet out, road blocked)
-- **Green** - Resolved (power on, internet on, road plowed)
+- **Red** - Problems (power out, road blocked)
+- **Green** - Resolved (power on, road plowed)
 
 ### **Confidence Colors:**
 - **Green shield** - High confidence (70-100%)

@@ -134,6 +134,7 @@ struct MainMapView: View {
                         onDispute: { await viewModel.disputeReport(report) },
                         onRoadCleared: roadClearedAction(for: report),
                         onPowerRestored: powerRestoredAction(for: report),
+                        onRoadNeedsPlowing: roadNeedsPlowingAction(for: report),
                         onDismiss: { viewModel.selectedReport = nil },
                         onDelete: { await viewModel.deleteOwnReport(report) as Bool }
                     )
@@ -188,6 +189,12 @@ struct MainMapView: View {
     private func powerRestoredAction(for report: Report) -> (() async -> Void)? {
         guard report.category == .powerOut else { return nil }
         return { await viewModel.markPowerRestored(report) }
+    }
+
+    /// Returns a road-needs-plowing callback only for roadPlowed reports; nil otherwise.
+    private func roadNeedsPlowingAction(for report: Report) -> (() async -> Void)? {
+        guard report.category == .roadPlowed else { return nil }
+        return { await viewModel.markRoadNeedsPlowing(report) }
     }
 }
 

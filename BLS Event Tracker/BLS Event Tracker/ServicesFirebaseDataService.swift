@@ -174,6 +174,21 @@ class FirebaseDataService {
         try await userProfilesRef().document(userID).delete()
     }
 
+    /// Anonymizes all reports authored by the given user so personal identifiers
+    /// are removed when an account is deleted. Sets author_id to "deleted" and
+    /// removes author_display_name from every report in the user's community.
+    func anonymizeReports(authorID: String, communityID: String) async throws {
+        let snapshot = try await reportsRef(communityID: communityID)
+            .whereField("author_id", isEqualTo: authorID)
+            .getDocuments()
+        for doc in snapshot.documents {
+            try await doc.reference.updateData([
+                "author_id": "deleted",
+                "author_display_name": FieldValue.delete()
+            ])
+        }
+    }
+
     // MARK: - Report Operations
 
     func fetchReports(for communityID: String, includeExpired: Bool = false) async throws -> [Report] {
@@ -508,10 +523,11 @@ class FirebaseDataService {
 
             guard let reportData = reportSnap.data() else { return nil }
 
-            // Block deletion if the report has been externally confirmed — the server-side
-            // check catches the race where the UI card was open before a confirmation arrived.
+            // Block deletion if the report has been corroborated or confirmed — the server-side
+            // check catches the race where the UI card was open before either event arrived.
             let liveVerificationCount = reportData["verification_count"] as? Int ?? 0
-            if liveVerificationCount > 0 {
+            let liveCorroborators = reportData["corroborating_submitter_ids"] as? [String] ?? []
+            if liveVerificationCount > 0 || !liveCorroborators.isEmpty {
                 blockedByConfirmation = true
                 return nil
             }

@@ -65,10 +65,10 @@ When a user who previously confirmed a **power outage** report changes their vot
 - Author's `confirmed_report_points` −weight (floored at 0.0).
 
 ### Road status reports are exempt from reputation penalties
-Road categories (`roadBlocked`, `roadPlowed`) have natural opposing categories — if someone disputes a "Road Blocked" report it most likely means the road has since been plowed, not that the original reporter was wrong. Flipping confirm→dispute on a road status report does **not** deduct points from the author. The dispute count still increments (affecting the report's confidence tier badge), but the author's reputation is unaffected.
+Road categories (`roadBlocked`, `roadPlowed`) have natural opposing categories — if someone disputes a "Road Blocked" report it most likely means the road has since been plowed, not that the original reporter was wrong. Flipping confirm→dispute on a road status report does **not** deduct points from the author. The dispute count still increments (affecting the report's confidence tier badge and road marker color), but the author's reputation is unaffected.
 
 ### Author deletes their own report
-An author can delete a report they submitted via the "Delete My Report" button (visible only to the author on the detail card and activity list row), **but only while `verificationCount == 0`**. Once any other user has confirmed the report the button is hidden — the report is considered community-validated and cannot be unilaterally removed by the author.
+An author can delete a report they submitted via the "Delete My Report" button (visible only to the author on the detail card and activity list row), **but only while `verificationCount == 0` and `corroboratingSubmitterIDs` is empty**. Once any other user has either confirmed the report or corroborated it (independently filed the same road+category), the button is hidden — the report is considered community-validated and cannot be unilaterally removed by the author.
 
 Delete accounting uses the report's `author_reputation_earned` ledger (a per-report field kept in sync by `verifyReport` and `disputeReport`) rather than reconstructing from vote counts. This guarantees the subtraction is always exact regardless of vote-flips or the corroboration mix.
 
@@ -136,6 +136,37 @@ The profile view also displays:
 
 ---
 
+## Road Plowed Interaction Model
+
+Road Plowed reports follow the same three-option layout as Road Blocked and Power Out. Other users see:
+
+| Button | Color | Action | Reputation Impact |
+|---|---|---|---|
+| Still Plowed | Green | Calls `verifyReport` | +1.0 points to author (standard confirm) |
+| Road Blocked | Orange | Calls `markRoadNeedsPlowing` — creates a new `roadBlocked` counter-report | None — original author is not penalised |
+| Was Never Plowed | Red | Calls `disputeReport` | None — `roadPlowed.hasOpposingCategory = true` |
+
+The **Road Blocked** button (counter-report path) is the road equivalent of "Road Has Been Cleared" on a Road Blocked report. It submits a fresh `roadBlocked` report without touching the original `roadPlowed` report's vote counts or the author's reputation.
+
+The report's author (own-report view) sees a single **"Road Needs Plowing Again"** button that also calls `markRoadNeedsPlowing`, letting them self-report that conditions have changed.
+
+---
+
+## Road Status Visual Feedback
+
+Road markers on the map derive their color from the most recent report's `confidenceTier`, not just its category:
+
+| `RoadStatus` | Color | Icon | When |
+|---|---|---|---|
+| `.clear` | Green | checkmark | Most recent report is `roadPlowed` |
+| `.blocked` | Red | xmark | Most recent report is `roadBlocked`, confidence tier ≠ mixed |
+| `.mixed` | Orange | triangle | Most recent report is `roadBlocked`, confidence tier = mixed (≥ 1 verify **and** ≥ 1 dispute) |
+| `.unknown` | Gray | question mark | No active road reports |
+
+This mirrors the behavior of power out markers, which also render orange when their `confidenceTier` is `.mixed`.
+
+---
+
 ## Report Confidence Tiers
 
 These are per-report indicators (distinct from per-user reputation) shown as badges in the report detail card.
@@ -159,8 +190,11 @@ A report with ≥ 3 disputes and more disputes than verifications is also marked
 |---|---|
 | `ModelsUserProfile.swift` | Stored fields and computed reputation properties |
 | `ModelsReport.swift` | `corroboratingWeight`, `corroboratingSubmitterIDs`, `corroboratorsRewarded`, `authorWeightedTrust`, `confidenceTier`, `hasOpposingCategory` |
+| `ModelsRoad.swift` | `RoadStatus` enum (`.clear`, `.blocked`, `.mixed`, `.unknown`); `updateStatus(from:)` drives road marker color from report confidence tier |
 | `ServicesFirebaseDataService.swift` | `verifyReport`, `disputeReport`, `submitCorroboratingReport`, `deleteOwnReport` transactions |
 | `ServicesMockDataService.swift` | In-memory mirror of Firebase reputation logic (used in mock/dev mode) |
 | `ViewModelsNewReportViewModel.swift` | Primary vs corroborating submission logic |
+| `ViewModelsMapViewModel.swift` | `markRoadCleared`, `markRoadNeedsPlowing`, `markPowerRestored` counter-report helpers |
+| `ViewModelsReportsListViewModel.swift` | Same counter-report helpers for the list view |
 | `ViewsProfileView.swift` | `ReputationRow` UI, trust tier labels and colours |
-| `ViewsReportDetailCard.swift` | Confirm/Dispute buttons, `ConfidenceTierBadge` |
+| `ViewsReportDetailCard.swift` | Confirm/Dispute buttons, `ConfidenceTierBadge`; three-button layouts for Road Blocked, Road Plowed, and Power Out |

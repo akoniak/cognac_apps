@@ -115,6 +115,55 @@ Before starting, record each user's baseline values from Firestore (`users/{uid}
 
 ---
 
+## Section 4c: Road Plowed Flow
+
+### Test 4c.1 — Three-button layout shown to non-authors on Road Plowed reports
+- U1 submits a Road Plowed report
+- U2 opens the detail card for that report
+- **Expected:** Three buttons shown: "Still Plowed" (green), "Road Blocked" (orange), "Was Never Plowed" (red)
+
+### Test 4c.2 — "Still Plowed" confirms the report and awards points to the author
+- U2 taps "Still Plowed" on U1's Road Plowed report
+- **Expected:** U1's `confirmed_report_points` +1.0, `confirmed_report_count` +1; U2's `verification_count` +1; report shows confirmation badge
+
+### Test 4c.3 — "Road Blocked" creates a counter-report without penalising the original author
+- U2 taps "Road Blocked" on U1's Road Plowed report
+- **Expected:** A new `roadBlocked` report is created for the same road; U2's `report_count` +1; U1's `confirmed_report_points` and `confirmed_report_count` **unchanged**; original Road Plowed report's vote counts **unchanged**
+
+### Test 4c.4 — "Was Never Plowed" disputes and does NOT penalise the author
+- U2 taps "Was Never Plowed" on U1's Road Plowed report
+- **Expected:** U1's `confirmed_report_points` **unchanged** (`roadPlowed.hasOpposingCategory = true`); dispute count increments; U2's `verification_count` +1
+
+### Test 4c.5 — Author sees "Road Needs Plowing Again" button, not the three-button layout
+- U1 opens the detail card for their own Road Plowed report
+- **Expected:** "Road Needs Plowing Again" (or "Road Blocked") button visible; no Still Plowed / Road Blocked / Was Never Plowed voter buttons shown
+
+### Test 4c.6 — Author tapping "Road Needs Plowing Again" creates a counter-report
+- U1 taps the "Road Needs Plowing Again" button on their own Road Plowed report
+- **Expected:** A new `roadBlocked` report is created for the same road; U1's `report_count` +1; road marker updates to reflect new status
+
+---
+
+## Section 4d: Road Blocked Marker Visual Feedback
+
+### Test 4d.1 — Undisputed Road Blocked report shows red marker
+- U1 submits a Road Blocked report; no one has disputed it
+- **Expected:** Road marker on map is **red** (xmark icon)
+
+### Test 4d.2 — Disputed Road Blocked report turns orange (mixed)
+- U2 confirms U1's Road Blocked report, then U3 disputes it (or U2 taps "Was Never Blocked")
+- **Expected:** Road marker turns **orange** (triangle icon) — matching the behavior of disputed power out markers
+
+### Test 4d.3 — Disputes resolved back to mostly-confirmed restores red marker
+- After 4d.2, additional users confirm the report until verifications > disputes and `confidenceTier` is no longer `.mixed`
+- **Expected:** Road marker returns to **red**
+
+### Test 4d.4 — Road Plowed report shows green marker (unchanged behavior)
+- Confirm that submitting or confirming a Road Plowed report still shows a green checkmark marker
+- **Expected:** Road marker is **green**
+
+---
+
 ## Section 5: Trusted Reporter Auto-Verification
 
 ### Test 5.1 — High-trust author gets auto-verified badge without community confirmations
@@ -142,20 +191,25 @@ Before starting, record each user's baseline values from Firestore (`users/{uid}
 ## Section 7: Report Deletion
 
 ### Test 7.1 — Delete within 10-minute grace period leaves stats unchanged
-- U1 submits a report; immediately deletes it (within 10 minutes, 0 verifications)
-- **Expected:** Report disappears from map; U1's `report_count` **stays at the post-submission value** (i.e. does NOT revert to the pre-submission value — the submission is still counted even though the report was deleted). Grace period only prevents the *decrement* that would otherwise happen outside the window.
+- U1 submits a report; immediately deletes it (within 10 minutes, 0 verifications, no corroborators)
+- **Expected:** Report disappears from map; U1's `report_count` **stays at the post-submission value** (i.e. does NOT revert to the pre—submission value — the submission is still counted even though the report was deleted). Grace period only prevents the *decrement* that would otherwise happen outside the window.
 
 ### Test 7.2 — Delete after grace period decrements report_count
-- U1 submits a report; wait 10+ minutes; delete (still 0 verifications)
-- **Expected:** U1's `report_count` −1
+- U1 submits a report; wait 10+ minutes; delete (still 0 verifications, no corroborators)
+− **Expected:** U1's `report_count` −1
 
-### Test 7.3 — Cannot delete a verified report
+### Test 7.3 — Cannot delete a confirmed report
 - U1 submits; U2 confirms; U1 tries to delete
-- **Expected:** Delete blocked (`verificationCount > 0`)
+- **Expected:** Delete blocked (`verificationCount > 0`); "Delete My Report" button is hidden; server-side guard also rejects the attempt if the UI is stale
 
-### Test 7.4 — Corroborators keep points if author deletes
-- U1 submits; U2 corroborates; A confirms (paying out U2's 0.5 points); attempt U1 deletion if permitted
-- **Expected:** U2's `confirmed_report_points` remain intact regardless of author deletion
+### Test 7.3b — Cannot delete a corroborated report
+- U1 submits; U2 corroborates (same road + category, triggering the corroborating path); U1 tries to delete
+- **Expected:** Delete blocked (`corroboratingSubmitterIDs` non-empty); "Delete My Report" button is hidden in both the detail card and the activity list; server-side guard rejects any race-condition attempt; error message reads "This report has been corroborated or confirmed by another user and can no longer be deleted."
+- Verify in Firestore: report document still exists; U2 still in `corroborating_submitter_ids`
+
+### Test 7.4 — Corroborators keep points after first verification
+- U1 submits; U2 corroborates; A confirms (paying out U2's 0.5 points)
+- **Expected:** U2's `confirmed_report_points` +0.5, `corroborators_rewarded = true`; U1 cannot delete (blocked by both corroboration and confirmation at this point)
 
 ---
 
@@ -207,7 +261,9 @@ Before starting, record each user's baseline values from Firestore (`users/{uid}
 3. **3.1 → 3.5** — Corroboration
 4. **4.1 → 4.5** — Disputes and vote flipping (includes power-out exempt category)
 5. **4b.1 → 4b.6** — Power restored flow
-6. **6.1 → 6.2** — Confidence tier badges (builds on prior tests)
-7. **5.1 → 5.2** — Trusted Reporter (needs a high-trust account; run after 8.x if starting fresh)
-8. **7.1 → 7.4** — Deletion edge cases
-9. **8.1 → 8.3** — Long-running score progression
+6. **4c.1 → 4c.6** — Road Plowed three-button flow and counter-report
+7. **4d.1 → 4d.4** — Road Blocked marker visual feedback (orange when disputed)
+8. **6.1 → 6.2** — Confidence tier badges (builds on prior tests)
+9. **5.1 → 5.2** — Trusted Reporter (needs a high-trust account; run after 8.x if starting fresh)
+10. **7.1 → 7.4** — Deletion edge cases
+11. **8.1 → 8.3** — Long-running score progression

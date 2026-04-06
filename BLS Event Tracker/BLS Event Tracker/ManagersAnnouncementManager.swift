@@ -53,12 +53,15 @@ class AnnouncementManager: ObservableObject {
         }
     }
 
-    /// One-time fetch — kept for use in the admin editor to reload the draft.
+    /// One-time fetch — used by the admin editor and the foreground refresh path.
+    /// Also sets hasReceivedFirstMessage so the onChange guard in RootView passes
+    /// even when called before the real-time listener delivers its first value.
     func loadLatestAnnouncement() async {
         do {
             let announcement = try await dataService.fetchAnnouncement()
             self.message = announcement.message
             self.lastUpdated = announcement.lastUpdated
+            self.hasReceivedFirstMessage = true
         } catch {
             print("Error loading announcement: \(error)")
             // Keep default values on error

@@ -112,7 +112,10 @@ struct ReportsListView: View {
                                 ReportRowView(
                                     report: report,
                                     navigationCoordinator: navigationCoordinator,
-                                    onDelete: { await viewModel.deleteOwnReport(report) as Bool }
+                                    onDelete: { _ = await viewModel.deleteOwnReport(report) },
+                                    onRoadCleared: { await viewModel.markRoadCleared(report) },
+                                    onPowerRestored: { await viewModel.markPowerRestored(report) },
+                                    onRoadNeedsPlowing: { await viewModel.markRoadNeedsPlowing(report) }
                                 )
                             }
                         }
@@ -184,9 +187,15 @@ struct ReportRowView: View {
     let report: Report
     let navigationCoordinator: NavigationCoordinator
     let onDelete: (() async -> Void)?
+    let onRoadCleared: () async -> Void
+    let onPowerRestored: () async -> Void
+    let onRoadNeedsPlowing: () async -> Void
     @State private var isExpanded = false
     @State private var isDeleting = false
+    @State private var isUpdating = false
+    @State private var confirmationMessage: String? = nil
     @State private var showReportIssueSheet = false
+    @State private var now = Date()
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -370,6 +379,88 @@ struct ReportRowView: View {
                             .disabled(isDeleting)
                         }
 
+                        // Status-update buttons for the author — available any time regardless of grace period
+                        if isOwnReport {
+                            if let message = confirmationMessage {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.blue)
+                                    Text(message)
+                                        .font(.subheadline.weight(.medium))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.blue.opacity(0.12))
+                                .cornerRadius(8)
+                            } else if report.category == .roadBlocked {
+                                Button {
+                                    Task {
+                                        isUpdating = true
+                                        await onRoadCleared()
+                                        isUpdating = false
+                                        confirmationMessage = "Road Cleared — Thanks for the update!"
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "checkmark.circle")
+                                            .font(.subheadline)
+                                        Text("Road Has Been Cleared")
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.blue)
+                                    .foregroundStyle(.white)
+                                    .cornerRadius(8)
+                                }
+                                .disabled(isUpdating)
+                            } else if report.category == .powerOut {
+                                Button {
+                                    Task {
+                                        isUpdating = true
+                                        await onPowerRestored()
+                                        isUpdating = false
+                                        confirmationMessage = "Power Restored — Thanks for the update!"
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "bolt.circle")
+                                            .font(.subheadline)
+                                        Text("Power Has Been Restored")
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.blue)
+                                    .foregroundStyle(.white)
+                                    .cornerRadius(8)
+                                }
+                                .disabled(isUpdating)
+                            } else if report.category == .roadPlowed {
+                                Button {
+                                    Task {
+                                        isUpdating = true
+                                        await onRoadNeedsPlowing()
+                                        isUpdating = false
+                                        confirmationMessage = "Road Blocked — Thanks for the update!"
+                                    }
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "xmark.circle")
+                                            .font(.subheadline)
+                                        Text("Road Blocked")
+                                            .font(.subheadline.weight(.medium))
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.orange)
+                                    .foregroundStyle(.white)
+                                    .cornerRadius(8)
+                                }
+                                .disabled(isUpdating)
+                            }
+                        }
+
                         // Report Issue link — only shown for other users' reports (App Store UGC compliance)
                         if !isOwnReport {
                             Button {
@@ -396,6 +487,13 @@ struct ReportRowView: View {
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(10)
         .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .task {
+            // Tick every 30 s so canDeleteReport re-evaluates as the grace period elapses.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                now = Date()
+            }
+        }
     }
     
     private var categoryColor: Color {
@@ -417,10 +515,10 @@ struct ReportRowView: View {
         return report.authorID == userID
     }
 
-    /// Delete is only available to the author, and only while the report has no external confirmations.
-    /// Once another user has confirmed it the report is considered community-validated and locked.
+    /// Delete is only available to the author, within the 10-minute grace period, and only while
+    /// the report has no external confirmations. Uses `now` so the view reacts when time passes.
     private var canDeleteReport: Bool {
-        isOwnReport && report.verificationCount == 0
+        isOwnReport && report.verificationCount == 0 && report.corroboratingSubmitterIDs.isEmpty && now.timeIntervalSince(report.createdAt) < 10 * 60
     }
 }
 

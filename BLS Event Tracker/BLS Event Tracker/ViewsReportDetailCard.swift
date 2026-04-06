@@ -19,6 +19,10 @@ struct ReportDetailCard: View {
     /// Only shown for powerOut reports. Marks the report expired
     /// without penalising the original author's reputation.
     let onPowerRestored: (() async -> Void)?
+    /// Called when the user indicates the road needs plowing again.
+    /// Only shown for roadPlowed reports. Submits a counter road_blocked report
+    /// without penalising the original author's reputation.
+    let onRoadNeedsPlowing: (() async -> Void)?
     let onDismiss: () -> Void
     /// Called when the author taps "Delete Report". Nil hides the button.
     /// Returns true if the delete succeeded (card should dismiss), false if blocked (card stays open).
@@ -29,6 +33,7 @@ struct ReportDetailCard: View {
     @State private var confirmationMessage: String? = nil
     @State private var deleteErrorMessage: String? = nil
     @State private var showReportIssueSheet = false
+    @State private var now = Date()
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -168,20 +173,98 @@ struct ReportDetailCard: View {
                     }
                 }
 
-                // Action buttons (only for general users and above, never for the report's author)
-                if authManager.userProfile?.role.canSubmitReports == true && !isOwnReport {
+                // Own-report: author can mark the situation as resolved at any time
+                // (this is a real-world status update, not a vote on their own report)
+                if isOwnReport && authManager.userProfile?.role.canSubmitReports == true {
                     if let message = confirmationMessage {
-                        // Confirmation message shown after voting
                         HStack(spacing: 8) {
-                            Image(systemName: message.contains("Confirmed") ? "hand.thumbsup.fill" : (message.contains("Cleared") || message.contains("Restored") ? "checkmark.circle.fill" : "hand.thumbsdown.fill"))
-                                .foregroundStyle(message.contains("Confirmed") ? .green : (message.contains("Cleared") || message.contains("Restored") ? .blue : .red))
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.blue)
                             Text(message)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(.primary)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(message.contains("Confirmed") ? Color.green.opacity(0.12) : (message.contains("Cleared") || message.contains("Restored") ? Color.blue.opacity(0.12) : Color.red.opacity(0.12)))
+                        .background(Color.blue.opacity(0.12))
+                        .cornerRadius(10)
+                    } else if report.category == .roadBlocked, let onRoadCleared {
+                        Button {
+                            Task {
+                                isProcessing = true
+                                await onRoadCleared()
+                                isProcessing = false
+                                confirmationMessage = "Road Cleared — Thanks for the update!"
+                                try? await Task.sleep(for: .seconds(2))
+                                onDismiss()
+                            }
+                        } label: {
+                            Label("Road Has Been Cleared", systemImage: "checkmark.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.blue)
+                                .foregroundStyle(.white)
+                                .cornerRadius(10)
+                        }
+                        .disabled(isProcessing)
+                    } else if report.category == .powerOut, let onPowerRestored {
+                        Button {
+                            Task {
+                                isProcessing = true
+                                await onPowerRestored()
+                                isProcessing = false
+                                confirmationMessage = "Power Restored — Thanks for the update!"
+                                try? await Task.sleep(for: .seconds(2))
+                                onDismiss()
+                            }
+                        } label: {
+                            Label("Power Has Been Restored", systemImage: "bolt.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.blue)
+                                .foregroundStyle(.white)
+                                .cornerRadius(10)
+                        }
+                        .disabled(isProcessing)
+                    } else if report.category == .roadPlowed, let onRoadNeedsPlowing {
+                        Button {
+                            Task {
+                                isProcessing = true
+                                await onRoadNeedsPlowing()
+                                isProcessing = false
+                                confirmationMessage = "Road Blocked — Thanks for the update!"
+                                try? await Task.sleep(for: .seconds(2))
+                                onDismiss()
+                            }
+                        } label: {
+                            Label("Road Blocked", systemImage: "xmark.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.orange)
+                                .foregroundStyle(.white)
+                                .cornerRadius(10)
+                        }
+                        .disabled(isProcessing)
+                    }
+                }
+
+                // Action buttons (only for general users and above, never for the report's author)
+                if authManager.userProfile?.role.canSubmitReports == true && !isOwnReport {
+                    if let message = confirmationMessage {
+                        // Confirmation message shown after voting
+                        HStack(spacing: 8) {
+                            Image(systemName: message.contains("Confirmed") ? "hand.thumbsup.fill" : (message.contains("Cleared") || message.contains("Restored") ? "checkmark.circle.fill" : (message.contains("Road Blocked") ? "xmark.circle.fill" : "hand.thumbsdown.fill")))
+                                .foregroundStyle(message.contains("Confirmed") ? .green : (message.contains("Cleared") || message.contains("Restored") ? .blue : (message.contains("Road Blocked") ? .orange : .red)))
+                            Text(message)
+                                .font(.subheadline.weight(.medium))
+                                .foregroundStyle(.primary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(message.contains("Confirmed") ? Color.green.opacity(0.12) : (message.contains("Cleared") || message.contains("Restored") ? Color.blue.opacity(0.12) : (message.contains("Road Blocked") ? Color.orange.opacity(0.12) : Color.red.opacity(0.12))))
                         .cornerRadius(10)
                     } else if report.category == .roadBlocked, let onRoadCleared {
                         // Road blocked: 3-button layout
@@ -311,49 +394,70 @@ struct ReportDetailCard: View {
                                 .cornerRadius(10)
                         }
                         .disabled(isProcessing || userHasDisputed)
-                    } else if report.category == .roadPlowed {
-                        // Road Plowed: situational labels matching Power/Road Blocked style
-                        HStack(spacing: 12) {
-                            Button {
-                                Task {
-                                    isProcessing = true
-                                    await onVerify()
-                                    isProcessing = false
-                                    confirmationMessage = "Confirmed — Still Plowed (Thank you!)"
-                                    try? await Task.sleep(for: .seconds(2))
-                                    onDismiss()
-                                }
-                            } label: {
-                                Label("Still Plowed", systemImage: "hand.thumbsup")
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(userHasVerified ? Color.green.opacity(0.2) : Color.green)
-                                    .foregroundStyle(userHasVerified ? .green : .white)
-                                    .cornerRadius(10)
+                    } else if report.category == .roadPlowed, let onRoadNeedsPlowing {
+                        // Road Plowed: 3-button layout matching Road Blocked style
+                        // Row 1: Confirm (still plowed)
+                        Button {
+                            Task {
+                                isProcessing = true
+                                await onVerify()
+                                isProcessing = false
+                                confirmationMessage = "Confirmed — Still Plowed (Thank you!)"
+                                try? await Task.sleep(for: .seconds(2))
+                                onDismiss()
                             }
-                            .disabled(isProcessing || userHasVerified)
-
-                            Button {
-                                Task {
-                                    isProcessing = true
-                                    await onDispute()
-                                    isProcessing = false
-                                    confirmationMessage = "Marked Inaccurate (Thank you!)"
-                                    try? await Task.sleep(for: .seconds(2))
-                                    onDismiss()
-                                }
-                            } label: {
-                                Label("Not Plowed", systemImage: "hand.thumbsdown")
-                                    .font(.subheadline.weight(.semibold))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 12)
-                                    .background(userHasDisputed ? Color.red.opacity(0.2) : Color.red)
-                                    .foregroundStyle(userHasDisputed ? .red : .white)
-                                    .cornerRadius(10)
-                            }
-                            .disabled(isProcessing || userHasDisputed)
+                        } label: {
+                            Label("Still Plowed", systemImage: "hand.thumbsup")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(userHasVerified ? Color.green.opacity(0.2) : Color.green)
+                                .foregroundStyle(userHasVerified ? .green : .white)
+                                .cornerRadius(10)
                         }
+                        .disabled(isProcessing || userHasVerified)
+
+                        // Row 2: Needs plowing again (situation changed, no rep penalty)
+                        Button {
+                            Task {
+                                isProcessing = true
+                                await onRoadNeedsPlowing()
+                                isProcessing = false
+                                confirmationMessage = "Road Blocked — Thanks for the update!"
+                                try? await Task.sleep(for: .seconds(2))
+                                onDismiss()
+                            }
+                        } label: {
+                            Label("Road Blocked", systemImage: "xmark.circle")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.orange)
+                                .foregroundStyle(.white)
+                                .cornerRadius(10)
+                        }
+                        .disabled(isProcessing)
+
+                        // Row 3: Was never plowed (rep penalty applies)
+                        Button {
+                            Task {
+                                isProcessing = true
+                                await onDispute()
+                                isProcessing = false
+                                confirmationMessage = "Marked Inaccurate (Thank you!)"
+                                try? await Task.sleep(for: .seconds(2))
+                                onDismiss()
+                            }
+                        } label: {
+                            Label("Was Never Plowed", systemImage: "hand.thumbsdown")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(userHasDisputed ? Color.red.opacity(0.2) : Color.red)
+                                .foregroundStyle(userHasDisputed ? .red : .white)
+                                .cornerRadius(10)
+                        }
+                        .disabled(isProcessing || userHasDisputed)
                     } else {
                         // All other reports: standard 2-button layout
                         HStack(spacing: 12) {
@@ -419,6 +523,13 @@ struct ReportDetailCard: View {
         .cornerRadius(16)
         .shadow(radius: 8)
         .padding()
+        .task {
+            // Tick every 30 s so canDeleteReport re-evaluates as the grace period elapses.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                now = Date()
+            }
+        }
         .sheet(isPresented: $showReportIssueSheet) {
             ReportIssueSheet(report: report)
         }
@@ -442,7 +553,7 @@ struct ReportDetailCard: View {
     /// Delete is only available to the author, and only while the report has no external confirmations.
     /// Once another user has confirmed it the report is considered community-validated and locked.
     private var canDeleteReport: Bool {
-        isOwnReport && report.verificationCount == 0
+        isOwnReport && report.verificationCount == 0 && report.corroboratingSubmitterIDs.isEmpty && now.timeIntervalSince(report.createdAt) < 10 * 60
     }
 
     private var userHasVerified: Bool {

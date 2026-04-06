@@ -12,12 +12,14 @@ import SwiftUI
 enum RoadStatus: String, Codable {
     case clear      // Road is clear - green
     case blocked    // Road is blocked - red
+    case mixed      // Blocked but disputed - orange
     case unknown    // Status unknown - gray
     
     var color: Color {
         switch self {
         case .clear: return .green
         case .blocked: return .red
+        case .mixed: return .orange
         case .unknown: return .gray
         }
     }
@@ -26,6 +28,7 @@ enum RoadStatus: String, Codable {
         switch self {
         case .clear: return "checkmark.circle.fill"
         case .blocked: return "xmark.circle.fill"
+        case .mixed: return "exclamationmark.triangle.fill"
         case .unknown: return "questionmark.circle.fill"
         }
     }
@@ -69,11 +72,12 @@ struct Road: Identifiable, Codable {
         let allRoadReports = (plowedReports + blockedReports).sorted { $0.createdAt > $1.createdAt }
         
         if let mostRecentReport = allRoadReports.first {
-            // Use the most recent report's category
             if mostRecentReport.category == .roadPlowed {
                 status = .clear
             } else {
-                status = .blocked
+                // Show mixed (orange) when the blocked report has both verifications and disputes,
+                // matching the same visual behavior as disputed power out markers.
+                status = mostRecentReport.confidenceTier == .mixed ? .mixed : .blocked
             }
         } else {
             status = .unknown

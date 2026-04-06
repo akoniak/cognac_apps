@@ -13,21 +13,12 @@ struct RootView: View {
     /// Stores the last message the user acknowledged so we can detect changes.
     @AppStorage("lastSeenAnnouncementMessage") private var lastSeenMessage = ""
     @State private var showWelcome = false
+    @Environment(\.scenePhase) private var scenePhase
 
-    /// Called on first Firestore delivery — always show the dialog if the message
-    /// hasn't been acknowledged yet this session (i.e. lastSeenMessage differs).
-    private func checkLaunchAnnouncement(_ message: String) {
+    /// Shows the dialog whenever the current message differs from what the user last acknowledged.
+    /// Used on both initial load and whenever the message changes (live or on foreground).
+    private func checkAnnouncement(_ message: String) {
         if message != lastSeenMessage {
-            showWelcome = true
-        }
-    }
-
-    /// Called when the message changes while the app is already open (admin update).
-    /// Suppresses the dialog if the admin merely reverted to the standard message.
-    private func checkLiveAnnouncement(_ newMessage: String) {
-        let isRevert = newMessage == AnnouncementManager.standardMessage
-        print("DEBUG live: new='\(newMessage.prefix(30))' lastSeen='\(lastSeenMessage.prefix(30))' isRevert=\(isRevert)")
-        if newMessage != lastSeenMessage && !isRevert {
             showWelcome = true
         }
     }
@@ -61,7 +52,7 @@ struct RootView: View {
                     }
                     .onChange(of: announcementManager.hasReceivedFirstMessage) { _, received in
                         if received {
-                            checkLaunchAnnouncement(announcementManager.message)
+                            checkAnnouncement(announcementManager.message)
                             // If no announcement dialog is showing, request permission now.
                             // If it is showing, the "I Understand" button requests it after dismissal.
                             if !showWelcome {
@@ -71,7 +62,7 @@ struct RootView: View {
                     }
                     .onChange(of: announcementManager.message) { _, newMessage in
                         guard announcementManager.hasReceivedFirstMessage else { return }
-                        checkLiveAnnouncement(newMessage)
+                        checkAnnouncement(newMessage)
                     }
             } else if !useMockData {
                 // In Firebase mode, show the real login screen when signed out
@@ -80,6 +71,13 @@ struct RootView: View {
                 // Mock mode: show a loading indicator while auto-login completes
                 ProgressView()
             }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // When the app returns to the foreground, do a one-time fetch so we
+            // catch any announcement change that happened while the app was suspended
+            // (the real-time listener can't fire when the process is frozen by iOS).
+            guard phase == .active, authManager.isAuthenticated else { return }
+            Task { await announcementManager.loadLatestAnnouncement() }
         }
     }
 }

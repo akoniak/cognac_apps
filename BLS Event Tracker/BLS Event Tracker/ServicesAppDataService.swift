@@ -81,6 +81,12 @@ class AppDataService {
         try await firebase.deleteUserProfile(userID: userID)
     }
 
+    /// Anonymizes all reports the user authored. No-op in mock mode.
+    func anonymizeReports(authorID: String, communityID: String) async throws {
+        guard !useMockData else { return }
+        try await firebase.anonymizeReports(authorID: authorID, communityID: communityID)
+    }
+
     /// Atomically increments a user's report_count by 1 without touching other profile fields.
     func incrementReportCount(userID: String) async throws {
         if useMockData {

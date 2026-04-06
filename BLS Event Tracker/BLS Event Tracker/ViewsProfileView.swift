@@ -83,6 +83,10 @@ struct ProfileView: View {
     @State private var showDeleteAccountConfirmation = false
     @State private var deleteAccountInProgress = false
     @State private var deleteAccountError: String? = nil
+    @State private var showReauthSheet = false
+    @State private var reauthPassword = ""
+    @State private var reauthInProgress = false
+    @State private var reauthError: String? = nil
 
     // Admin - announcement
     @State private var announcementDraft = ""
@@ -395,6 +399,8 @@ struct ProfileView: View {
                         deleteAccountError = nil
                         do {
                             try await authManager.deleteAccount()
+                        } catch AuthError.requiresRecentLogin {
+                            showReauthSheet = true
                         } catch {
                             deleteAccountError = error.localizedDescription
                         }
@@ -403,7 +409,33 @@ struct ProfileView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will permanently delete your account and profile data. Submitted reports may remain anonymized. This cannot be undone.")
+                Text("This will permanently delete your account and profile data. Submitted reports will be anonymized. This cannot be undone.")
+            }
+            .sheet(isPresented: $showReauthSheet) {
+                ReauthSheet(
+                    providers: authManager.signInProviders,
+                    email: authManager.user?.email ?? "",
+                    password: $reauthPassword,
+                    inProgress: $reauthInProgress,
+                    error: $reauthError
+                ) {
+                    // Called after successful re-auth — retry deletion
+                    Task {
+                        reauthInProgress = true
+                        reauthError = nil
+                        do {
+                            try await authManager.deleteAccount()
+                            showReauthSheet = false
+                        } catch {
+                            reauthError = error.localizedDescription
+                        }
+                        reauthInProgress = false
+                    }
+                } onCancel: {
+                    showReauthSheet = false
+                    reauthPassword = ""
+                    reauthError = nil
+                }
             }
         }
     }
@@ -535,6 +567,148 @@ struct ReputationRow: View {
         }
         .font(.subheadline)
         .padding(.vertical, 4)
+    }
+}
+
+// MARK: - Re-auth Sheet
+
+/// Shown when deleteAccount() throws requiresRecentLogin.
+/// Detects the user's sign-in provider and shows the appropriate UI.
+struct ReauthSheet: View {
+    let providers: [String]
+    let email: String
+    @Binding var password: String
+    @Binding var inProgress: Bool
+    @Binding var error: String?
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    @StateObject private var authManager = AuthenticationManager.shared
+
+    var hasEmail: Bool  { providers.contains("password") }
+    var hasGoogle: Bool { providers.contains("google.com") }
+    var hasApple: Bool  { providers.contains("apple.com") }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("For your security, please confirm your identity before deleting your account.")
+                        .foregroundStyle(.secondary)
+                }
+
+                if hasEmail {
+                    Section("Re-enter Password") {
+                        SecureField("Password", text: $password)
+                            .textContentType(.password)
+
+                        if let error {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+
+                        Button {
+                            inProgress = true
+                            error = nil
+                            Task {
+                                do {
+                                    try await authManager.reauthenticateWithEmail(password: password)
+                                    onConfirm()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                    inProgress = false
+                                }
+                            }
+                        } label: {
+                            if inProgress {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                Text("Confirm and Delete Account")
+                                    .frame(maxWidth: .infinity)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .disabled(password.isEmpty || inProgress)
+                    }
+                }
+
+                if hasGoogle {
+                    Section {
+                        Button {
+                            inProgress = true
+                            error = nil
+                            Task {
+                                do {
+                                    try await authManager.reauthenticateWithGoogle()
+                                    onConfirm()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                    inProgress = false
+                                }
+                            }
+                        } label: {
+                            if inProgress {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                Label("Continue with Google", systemImage: "globe")
+                                    .frame(maxWidth: .infinity)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .disabled(inProgress)
+                        if let error, !hasEmail { // show error here if no email section
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                if hasApple {
+                    Section {
+                        Button {
+                            inProgress = true
+                            error = nil
+                            Task {
+                                do {
+                                    try await authManager.reauthenticateWithApple()
+                                    onConfirm()
+                                } catch {
+                                    self.error = error.localizedDescription
+                                    inProgress = false
+                                }
+                            }
+                        } label: {
+                            if inProgress {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                Label("Continue with Apple", systemImage: "apple.logo")
+                                    .frame(maxWidth: .infinity)
+                                    .foregroundStyle(.red)
+                            }
+                        }
+                        .disabled(inProgress)
+                        if let error, !hasEmail, !hasGoogle {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Confirm Identity")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", action: onCancel)
+                        .disabled(inProgress)
+                }
+            }
+        }
     }
 }
 

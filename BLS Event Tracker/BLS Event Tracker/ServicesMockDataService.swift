@@ -480,7 +480,7 @@ enum DataServiceError: LocalizedError {
         case .announcementNotFound:
             return "Announcement not found"
         case .reportAlreadyConfirmed:
-            return "This report has already been confirmed by another user and can no longer be deleted."
+            return "This report has been corroborated or confirmed by another user and can no longer be deleted."
         }
     }
 }

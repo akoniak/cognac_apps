@@ -267,6 +267,57 @@ class MapViewModel: ObservableObject {
         }
     }
     
+    /// Submits a roadBlocked counter-report for a roadPlowed report.
+    /// This does not penalise the original author — the road was plowed at the time,
+    /// it simply needs plowing again (e.g. new snowfall).
+    func markRoadNeedsPlowing(_ report: Report) async {
+        guard let userProfile = authManager.userProfile,
+              let userID = authManager.user?.uid,
+              let road = roads.first(where: { $0.id == report.roadID }) else {
+            return
+        }
+
+        let expiresAt = Calendar.current.date(byAdding: .day, value: 30, to: Date()) ?? Date().addingTimeInterval(30 * 24 * 3600)
+
+        let counterReport = Report(
+            communityID: report.communityID,
+            category: .roadBlocked,
+            status: .active,
+            address: road.name,
+            latitude: road.centerLatitude,
+            longitude: road.centerLongitude,
+            roadID: road.id,
+            note: nil,
+            photoURL: nil,
+            authorID: userID,
+            authorDisplayName: userProfile.displayName,
+            verificationCount: 0,
+            disputeCount: 0,
+            verifiedByUserIDs: [],
+            disputedByUserIDs: [],
+            createdAt: Date(),
+            expiresAt: expiresAt,
+            updatedAt: Date(),
+            isHidden: false,
+            hiddenByModeratorID: nil,
+            hiddenReason: nil,
+            corroboratingWeight: 1.0,
+            corroboratingSubmitterIDs: [],
+            corroboratorsRewarded: false,
+            authorReputationEarned: 0.0,
+            authorWeightedTrust: userProfile.weightedTrust
+        )
+
+        do {
+            _ = try await dataService.createReport(counterReport)
+            try await dataService.incrementReportCount(userID: userID)
+            await authManager.refreshUserProfile()
+        } catch {
+            errorMessage = "Failed to submit road needs plowing update"
+            showError = true
+        }
+    }
+
     /// Marks a power outage report as resolved (power has been restored).
     /// This does not penalise the original author — power was out when reported,
     /// it has simply since been restored.
@@ -293,7 +344,7 @@ class MapViewModel: ObservableObject {
             await authManager.refreshUserProfile()
             return true
         } catch DataServiceError.reportAlreadyConfirmed {
-            errorMessage = "This report has already been confirmed by another user and can no longer be deleted."
+            errorMessage = "This report has been corroborated or confirmed by another user and can no longer be deleted."
             showError = true
             return false
         } catch {

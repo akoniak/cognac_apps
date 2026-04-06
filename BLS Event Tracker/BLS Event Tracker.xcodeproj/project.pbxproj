@@ -17,6 +17,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		019D1888B433F9B0D27228F0 /* BLS Event TrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "BLS Event TrackerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		539A8968D4BEB10AF2FC772F /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		98B9F5862F72E4AF00848020 /* ViewsModerateReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewsModerateReportsView.swift; sourceTree = "<group>"; };
 		98B9F5912F76296100848020 /* ViewsAdminLeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewsAdminLeaderboardView.swift; sourceTree = "<group>"; };
 		98B9F5932F77426200848020 /* REPUTATION_TEST_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REPUTATION_TEST_PLAN.md; sourceTree = "<group>"; };
@@ -46,9 +48,18 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		9057CFC49367BE9BB96B857D /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				539A8968D4BEB10AF2FC772F /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
 		98EAB8962F724A8D0076BB01 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				9057CFC49367BE9BB96B857D /* iOS */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -69,6 +80,7 @@
 			isa = PBXGroup;
 			children = (
 				98FFC5B52F70E1A4003E1CB2 /* BLS Event Tracker.app */,
+				019D1888B433F9B0D27228F0 /* BLS Event TrackerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -294,7 +306,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "BLS Event Tracker/BLS Event Tracker.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = A9RLAXT55S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -330,7 +342,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "BLS Event Tracker/BLS Event Tracker.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 14;
+				CURRENT_PROJECT_VERSION = 15;
 				DEVELOPMENT_TEAM = A9RLAXT55S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

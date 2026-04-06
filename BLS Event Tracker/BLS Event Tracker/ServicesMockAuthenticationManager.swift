@@ -444,10 +444,11 @@ class AuthenticationManager: ObservableObject {
 
     // MARK: - Delete Account
 
-    /// Deletes the user's Firestore profile document and Firebase Auth account,
-    /// then clears local auth state. Firebase requires a recent sign-in to delete
-    /// an account; if the credential is stale this will throw an error that the
-    /// caller should surface to the user.
+    /// Anonymizes the user's reports, deletes their Firestore profile, then deletes
+    /// their Firebase Auth account. All Firestore writes happen while the Auth
+    /// token is still valid. If the credential is stale, throws
+    /// `AuthError.requiresRecentLogin` — the caller should prompt for re-auth and
+    /// retry. The anonymize + profile-delete steps are idempotent so a retry is safe.
     func deleteAccount() async throws {
         guard !useMockData else {
             user = nil
@@ -459,16 +460,94 @@ class AuthenticationManager: ObservableObject {
               let userID = user?.uid else {
             throw AuthError.invalidCredential
         }
-        // Delete Firestore profile first so Firestore security rules still
-        // allow the write while the Auth account exists.
+        // Anonymize reports and delete profile while auth token is still valid.
+        if let communityID = userProfile?.communityID {
+            try await AppDataService.shared.anonymizeReports(authorID: userID, communityID: communityID)
+        }
         try await AppDataService.shared.deleteUserProfile(userID: userID)
-        // Delete the Firebase Auth account.
-        try await firebaseUser.delete()
-        // Auth state listener will fire and clear isAuthenticated,
-        // but clear local state immediately for a responsive UI.
+        // Delete the Firebase Auth account — may throw requiresRecentLogin.
+        do {
+            try await firebaseUser.delete()
+        } catch let error as NSError where error.code == AuthErrorCode.requiresRecentLogin.rawValue {
+            // Profile/reports already cleaned up; on retry only this step remains.
+            throw AuthError.requiresRecentLogin
+        }
         user = nil
         userProfile = nil
         isAuthenticated = false
+    }
+
+    // MARK: - Re-authentication
+
+    /// The sign-in provider IDs linked to the current account (e.g. "password", "google.com", "apple.com").
+    var signInProviders: [String] {
+        guard !useMockData else { return ["password"] }
+        return Auth.auth().currentUser?.providerData.map(\.providerID) ?? []
+    }
+
+    /// Re-authenticates an email/password account. Call before retrying `deleteAccount()`
+    /// when it throws `AuthError.requiresRecentLogin`.
+    func reauthenticateWithEmail(password: String) async throws {
+        guard let email = user?.email,
+              let firebaseUser = Auth.auth().currentUser else {
+            throw AuthError.invalidCredential
+        }
+        let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+        try await firebaseUser.reauthenticate(with: credential)
+    }
+
+    /// Re-authenticates a Google account. Call before retrying `deleteAccount()`
+    /// when it throws `AuthError.requiresRecentLogin`.
+    func reauthenticateWithGoogle() async throws {
+        guard let windowScene = UIApplication.shared.connectedScenes
+                .compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+              let rootVC = windowScene.keyWindow?.rootViewController else {
+            throw AuthError.invalidCredential
+        }
+        var presentingVC = rootVC
+        while let presented = presentingVC.presentedViewController {
+            presentingVC = presented
+        }
+        let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presentingVC)
+        guard let idToken = result.user.idToken?.tokenString else {
+            throw AuthError.invalidToken
+        }
+        let credential = GoogleAuthProvider.credential(
+            withIDToken: idToken,
+            accessToken: result.user.accessToken.tokenString
+        )
+        guard let firebaseUser = Auth.auth().currentUser else {
+            throw AuthError.invalidCredential
+        }
+        try await firebaseUser.reauthenticate(with: credential)
+    }
+
+    /// Re-authenticates an Apple account. Call before retrying `deleteAccount()`
+    /// when it throws `AuthError.requiresRecentLogin`.
+    func reauthenticateWithApple() async throws {
+        let nonce = randomNonce()
+        currentAppleNonce = nonce
+
+        let appleIDProvider = ASAuthorizationAppleIDProvider()
+        let request = appleIDProvider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = sha256(nonce)
+
+        let credential: OAuthCredential = try await withCheckedThrowingContinuation { continuation in
+            let delegate = AppleSignInDelegate(nonce: nonce, continuation: continuation)
+            self.appleSignInDelegate = delegate
+            let controller = ASAuthorizationController(authorizationRequests: [request])
+            controller.delegate = delegate
+            controller.presentationContextProvider = delegate
+            controller.performRequests()
+        }
+        self.appleSignInDelegate = nil
+
+        guard let firebaseUser = Auth.auth().currentUser else {
+            throw AuthError.invalidCredential
+        }
+        try await firebaseUser.reauthenticate(with: credential)
     }
 }
 
@@ -525,12 +604,14 @@ enum AuthError: LocalizedError {
     case invalidCredential
     case invalidToken
     case noCommunityAvailable
+    case requiresRecentLogin
 
     var errorDescription: String? {
         switch self {
         case .invalidCredential: return "Invalid authentication credential"
         case .invalidToken: return "Failed to obtain authentication token"
         case .noCommunityAvailable: return "No community available for registration"
+        case .requiresRecentLogin: return "Please re-authenticate to continue"
         }
     }
 }
