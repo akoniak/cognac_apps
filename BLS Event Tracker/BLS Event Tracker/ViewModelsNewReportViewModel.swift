@@ -48,7 +48,10 @@ class NewReportViewModel: ObservableObject {
         defer { isSubmitting = false }
 
         do {
-            let expirationHours = Report.defaultExpirationHours(for: selectedCategory)
+            // Use admin-configured expiration hours if available, otherwise fall back to defaults.
+            let community = try? await dataService.fetchCommunity(communityID: userProfile.communityID)
+            let expirationHours = community?.expirationSettings.hours(for: selectedCategory)
+                ?? Report.defaultExpirationHours(for: selectedCategory)
             let expiresAt = Calendar.current.date(
                 byAdding: .hour,
                 value: expirationHours,

@@ -42,6 +42,11 @@ class AppDataService {
         }
     }
 
+    func updateCommunityExpirationSettings(communityID: String, settings: ExpirationSettings) async throws {
+        guard !useMockData else { return }
+        try await firebase.updateCommunityExpirationSettings(communityID: communityID, settings: settings)
+    }
+
     // MARK: - User Profiles
 
     func fetchUserProfile(userID: String) async throws -> UserProfile {

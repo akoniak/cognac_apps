@@ -135,6 +135,17 @@ class FirebaseDataService {
         return try decodeCommunity(id: doc.documentID, data: data)
     }
 
+    /// Persists the admin-configured expiration hours for each report category.
+    /// Uses Firestore dot-notation to update individual keys inside the `settings` map
+    /// without overwriting unrelated settings.
+    func updateCommunityExpirationSettings(communityID: String, settings: ExpirationSettings) async throws {
+        try await communitiesRef.document(communityID).updateData([
+            "settings.expiration_power_out":    "\(settings.powerOutHours)",
+            "settings.expiration_road_blocked": "\(settings.roadBlockedHours)",
+            "settings.expiration_road_plowed":  "\(settings.roadPlowedHours)"
+        ])
+    }
+
     // MARK: - User Profile Operations
 
     func fetchUserProfile(userID: String) async throws -> UserProfile {

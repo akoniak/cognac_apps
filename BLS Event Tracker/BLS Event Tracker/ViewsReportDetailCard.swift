@@ -97,11 +97,9 @@ struct ReportDetailCard: View {
                     
                     Spacer()
                     
-                    if let displayName = report.authorDisplayName {
-                        Label(displayName, systemImage: "person")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+                    Label("Reporter \(report.authorAlias)", systemImage: "person")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             
@@ -199,7 +197,7 @@ struct ReportDetailCard: View {
                                 onDismiss()
                             }
                         } label: {
-                            Label("Road Has Been Cleared", systemImage: "checkmark.circle")
+                            Label("Now Cleared", systemImage: "checkmark.circle")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -219,7 +217,7 @@ struct ReportDetailCard: View {
                                 onDismiss()
                             }
                         } label: {
-                            Label("Power Has Been Restored", systemImage: "bolt.circle")
+                            Label("Power Restored", systemImage: "bolt.circle")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -239,7 +237,7 @@ struct ReportDetailCard: View {
                                 onDismiss()
                             }
                         } label: {
-                            Label("Road Blocked", systemImage: "xmark.circle")
+                            Label("Now Blocked", systemImage: "xmark.circle")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -321,7 +319,7 @@ struct ReportDetailCard: View {
                                 onDismiss()
                             }
                         } label: {
-                            Label("Was Never Blocked", systemImage: "hand.thumbsdown")
+                            Label("Incorrect", systemImage: "hand.thumbsdown")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -385,7 +383,7 @@ struct ReportDetailCard: View {
                                 onDismiss()
                             }
                         } label: {
-                            Label("Was Never Out", systemImage: "hand.thumbsdown")
+                            Label("Incorrect", systemImage: "hand.thumbsdown")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -449,7 +447,7 @@ struct ReportDetailCard: View {
                                 onDismiss()
                             }
                         } label: {
-                            Label("Was Never Plowed", systemImage: "hand.thumbsdown")
+                            Label("Incorrect", systemImage: "hand.thumbsdown")
                                 .font(.subheadline.weight(.semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)

@@ -41,6 +41,9 @@ class AuthenticationManager: ObservableObject {
     @Published var user: AppUser?
     @Published var userProfile: UserProfile?
     @Published var isAuthenticated = false
+    /// True until the first Firebase auth state callback fires (or immediately false in mock mode).
+    /// RootView uses this to show a splash screen instead of flashing the login screen.
+    @Published var isCheckingAuth: Bool
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -62,6 +65,8 @@ class AuthenticationManager: ObservableObject {
     private var authStateHandle: AuthStateDidChangeListenerHandle?
 
     private init() {
+        // Mock mode resolves auth synchronously; Firebase mode is async so start in loading state.
+        isCheckingAuth = !useMockData
         if useMockData {
             autoLoginMockUser()
         } else {
@@ -99,6 +104,7 @@ class AuthenticationManager: ObservableObject {
         authStateHandle = Auth.auth().addStateDidChangeListener { [weak self] _, firebaseUser in
             Task { @MainActor [weak self] in
                 guard let self else { return }
+                defer { self.isCheckingAuth = false }
                 if let firebaseUser {
                     let appUser = AppUser(firebaseUser)
                     self.user = appUser

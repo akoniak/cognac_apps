@@ -160,14 +160,21 @@ private struct LeaderboardRowView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 28, alignment: .trailing)
 
-            // Name + role + trust bar
+            // Name (email link) + alias + role + trust bar
             VStack(alignment: .leading, spacing: 4) {
+                // Line 1: name as mailto link + role badge
                 HStack(spacing: 6) {
-                    Text(user.displayName ?? user.email ?? "Unknown")
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
+                    if let email = user.email,
+                       let url = URL(string: "mailto:\(email)") {
+                        Link(user.displayName ?? email, destination: url)
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                    } else {
+                        Text(user.displayName ?? "Unknown")
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                    }
 
-                    // Role badge (only for non-general roles)
                     if user.role != .general {
                         Text(user.role.displayName)
                             .font(.caption2.weight(.medium))
@@ -178,6 +185,11 @@ private struct LeaderboardRowView: View {
                             .clipShape(Capsule())
                     }
                 }
+
+                // Line 2: anonymous alias
+                Text(reporterAlias(for: user.id ?? ""))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
 
                 // Trust progress bar
                 GeometryReader { geo in

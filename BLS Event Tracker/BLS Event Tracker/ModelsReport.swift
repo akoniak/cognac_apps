@@ -162,8 +162,24 @@ struct Report: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Reporter Alias
+
+/// Derives a stable, anonymous alias from a user UID.
+/// The same UID always produces the same label, keeping reporter identity private
+/// from the public-facing UI while remaining traceable by admins.
+func reporterAlias(for userID: String) -> String {
+    var hash = 0
+    for scalar in userID.unicodeScalars {
+        hash = (hash &* 31 &+ Int(scalar.value)) & 0x7FFF_FFFF
+    }
+    return "#\((hash % 9000) + 1000)"
+}
+
 // MARK: - Computed Properties
 extension Report {
+    /// Anonymous label shown to regular users instead of the author's real name.
+    var authorAlias: String { reporterAlias(for: authorID) }
+
     var isExpired: Bool {
         Date() > expiresAt
     }
@@ -224,7 +240,7 @@ enum ConfidenceTier {
     case trustedReporter  // Green - Author is Highly Trusted (weightedTrust ≥ 0.8), no disputes
     case verified         // Green - ≥ 2 community confirmations, no disputes
     case mixed            // Yellow - Has both verifications and disputes
-    case unconfirmed      // Red - No verifications or more disputes
+    case unconfirmed      // Orange - No verifications or more disputes
 
     var displayName: String {
         switch self {
@@ -240,7 +256,7 @@ enum ConfidenceTier {
         case .trustedReporter: return .green
         case .verified: return .green
         case .mixed: return .yellow
-        case .unconfirmed: return .red
+        case .unconfirmed: return Color(red: 0.95, green: 0.6, blue: 0.1)
         }
     }
 
@@ -264,11 +280,11 @@ extension Report {
     static func defaultExpirationHours(for category: ReportCategory) -> Int {
         switch category {
         case .powerOut:
-            return 30 * 24  // 30 days — effectively permanent until countered or cleared
+            return 7 * 24   // 7 days default (admin-configurable)
         case .roadBlocked:
-            return 30 * 24  // 30 days — effectively permanent until countered or cleared
+            return 48       // 48 hours default (admin-configurable)
         case .roadPlowed:
-            return 12       // Plowed roads expire after 12 hours (may snow again)
+            return 12       // 12 hours default — may snow again (admin-configurable)
         }
     }
 }

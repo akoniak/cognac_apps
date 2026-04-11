@@ -105,6 +105,14 @@ struct ProfileView: View {
     @State private var clearInProgress = false
     @State private var clearResult: String? = nil
 
+    // Admin - report expiration settings
+    @State private var expirationPowerOut: Int = ExpirationSettings.default.powerOutHours
+    @State private var expirationRoadBlocked: Int = ExpirationSettings.default.roadBlockedHours
+    @State private var expirationRoadPlowed: Int = ExpirationSettings.default.roadPlowedHours
+    @State private var expirationSaving = false
+    @State private var expirationSaved = false
+    @State private var expirationSaveError: String? = nil
+
     var body: some View {
         NavigationStack {
             List {
@@ -253,6 +261,73 @@ struct ProfileView: View {
                         }
                     }
 
+                    // Report expiration settings
+                    Section(header: Label("Report Expiration", systemImage: "clock.badge.checkmark")) {
+                        let options = ExpirationSettings.allowedHours
+
+                        Picker("Power Out", selection: $expirationPowerOut) {
+                            ForEach(options, id: \.hours) { option in
+                                Text(option.label).tag(option.hours)
+                            }
+                        }
+                        Picker("Road Blocked", selection: $expirationRoadBlocked) {
+                            ForEach(options, id: \.hours) { option in
+                                Text(option.label).tag(option.hours)
+                            }
+                        }
+                        Picker("Road Plowed", selection: $expirationRoadPlowed) {
+                            ForEach(options, id: \.hours) { option in
+                                Text(option.label).tag(option.hours)
+                            }
+                        }
+
+                        if expirationSaved {
+                            Label("Saved", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.subheadline)
+                        } else {
+                            Button {
+                                guard let communityID = authManager.userProfile?.communityID else { return }
+                                Task {
+                                    expirationSaving = true
+                                    expirationSaveError = nil
+                                    do {
+                                        let newSettings = ExpirationSettings(
+                                            powerOutHours: expirationPowerOut,
+                                            roadBlockedHours: expirationRoadBlocked,
+                                            roadPlowedHours: expirationRoadPlowed
+                                        )
+                                        try await AppDataService.shared.updateCommunityExpirationSettings(
+                                            communityID: communityID,
+                                            settings: newSettings
+                                        )
+                                        expirationSaved = true
+                                        try? await Task.sleep(for: .seconds(2))
+                                        expirationSaved = false
+                                    } catch {
+                                        expirationSaveError = "Save failed: \(error.localizedDescription)"
+                                    }
+                                    expirationSaving = false
+                                }
+                            } label: {
+                                if expirationSaving {
+                                    ProgressView()
+                                } else {
+                                    Text("Save Expiration Settings")
+                                        .frame(maxWidth: .infinity, alignment: .center)
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                            }
+                            .disabled(expirationSaving)
+                        }
+
+                        if let error = expirationSaveError {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        }
+                    }
+
                     // Clear reports
                     Section(header: Label("Incident Management", systemImage: "trash")) {
                         if let result = clearResult {
@@ -329,6 +404,9 @@ struct ProfileView: View {
                     } label: {
                         Label("Privacy Policy", systemImage: "hand.raised")
                     }
+                    Link(destination: URL(string: "mailto:akoniak@gmail.com")!) {
+                        Label("Contact", systemImage: "envelope")
+                    }
                 }
 
                 // Sign out / account removal
@@ -367,6 +445,16 @@ struct ProfileView: View {
                 announcementDraft = announcementManager.message
                 await announcementManager.loadLatestAnnouncement()
                 announcementDraft = announcementManager.message
+
+                // Load current expiration settings for admin pickers
+                if let communityID = authManager.userProfile?.communityID,
+                   authManager.userProfile?.role.canManageUsers == true,
+                   let community = try? await AppDataService.shared.fetchCommunity(communityID: communityID) {
+                    let s = community.expirationSettings
+                    expirationPowerOut = s.powerOutHours
+                    expirationRoadBlocked = s.roadBlockedHours
+                    expirationRoadPlowed = s.roadPlowedHours
+                }
             }
             .alert("Save as Template", isPresented: $showSaveTemplateAlert) {
                 TextField("Template name", text: $templateNameDraft)

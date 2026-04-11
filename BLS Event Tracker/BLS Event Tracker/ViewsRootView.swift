@@ -36,7 +36,10 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if authManager.isAuthenticated {
+            if authManager.isCheckingAuth {
+                // Auth state not yet resolved — show splash to avoid flashing the login screen
+                SplashView()
+            } else if authManager.isAuthenticated {
                 MainTabView()
                     .alert("BLS Community Powered Status", isPresented: $showWelcome) {
                         Button("I Understand", role: .none) {

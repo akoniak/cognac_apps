@@ -7,6 +7,39 @@
 
 import Foundation
 
+// MARK: - Expiration Settings
+
+/// Per-category report expiration durations, configurable by admins.
+struct ExpirationSettings {
+    var powerOutHours: Int
+    var roadBlockedHours: Int
+    var roadPlowedHours: Int
+
+    static let `default` = ExpirationSettings(
+        powerOutHours: 7 * 24,   // 7 days
+        roadBlockedHours: 48,    // 48 hours
+        roadPlowedHours: 12      // 12 hours
+    )
+
+    /// The allowed picker options (shared across all categories).
+    static let allowedHours: [(hours: Int, label: String)] = [
+        (12,      "12 hours"),
+        (24,      "24 hours"),
+        (48,      "48 hours"),
+        (7 * 24,  "7 days")
+    ]
+
+    func hours(for category: ReportCategory) -> Int {
+        switch category {
+        case .powerOut:     return powerOutHours
+        case .roadBlocked:  return roadBlockedHours
+        case .roadPlowed:   return roadPlowedHours
+        }
+    }
+}
+
+// MARK: - Community Model
+
 struct Community: Codable, Identifiable {
     var id: String?
     var name: String
@@ -30,6 +63,17 @@ struct Community: Codable, Identifiable {
     // Future expansion readiness
     var settings: [String: String]? // Flexible key-value for future config
     
+    // Computed from the `settings` dict — no stored property needed.
+    /// Returns the admin-configured expiration hours, falling back to defaults
+    /// for any key that hasn't been written yet.
+    var expirationSettings: ExpirationSettings {
+        ExpirationSettings(
+            powerOutHours:    settings?["expiration_power_out"].flatMap(Int.init)    ?? ExpirationSettings.default.powerOutHours,
+            roadBlockedHours: settings?["expiration_road_blocked"].flatMap(Int.init) ?? ExpirationSettings.default.roadBlockedHours,
+            roadPlowedHours:  settings?["expiration_road_plowed"].flatMap(Int.init)  ?? ExpirationSettings.default.roadPlowedHours
+        )
+    }
+
     enum CodingKeys: String, CodingKey {
         case id
         case name
