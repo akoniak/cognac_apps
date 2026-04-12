@@ -19,19 +19,26 @@ struct MainMapView: View {
             Map(position: $viewModel.cameraPosition) {
                 // User's location
                 UserAnnotation()
-                
-                // Road status icons (show when "All" or "Roads" filter is selected)
+
+                // Road status polylines from GeoJSON (show when "All" or "Roads" filter is selected)
                 if viewModel.selectedFilter == .all || viewModel.selectedFilter == .roads {
-                    ForEach(viewModel.roads.filter { $0.status != .unknown }) { road in
-                        Annotation(road.name, coordinate: road.coordinate) {
-                            RoadStatusMarker(
-                                road: road,
-                                isSelected: viewModel.selectedReport?.roadID == road.id
-                            )
-                            .onTapGesture {
-                                viewModel.selectedReport = viewModel.latestReport(for: road)
-                            }
+                    // Visible colored road lines
+                    ForEach(viewModel.coloredRoadSegments) { segment in
+                        MapPolyline(coordinates: segment.coordinates)
+                            .stroke(segment.status.color, lineWidth: 4)
+                    }
+
+                    // Invisible tap targets at each segment midpoint
+                    ForEach(viewModel.coloredRoadSegments) { segment in
+                        Annotation("", coordinate: segment.midpoint) {
+                            Color.clear
+                                .frame(width: 44, height: 44)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    viewModel.selectedReport = viewModel.latestReport(forRoadID: segment.roadID)
+                                }
                         }
+                        .annotationTitles(.hidden)
                     }
                 }
                 
