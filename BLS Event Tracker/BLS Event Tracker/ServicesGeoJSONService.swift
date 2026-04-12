@@ -5,6 +5,7 @@
 //  Loads and parses ROADS.geojson into road segments for map overlay display.
 //
 
+#if DEV_BUILD
 import Foundation
 import MapKit
 import CoreLocation
@@ -290,3 +291,4 @@ class GeoJSONService {
         return coords
     }
 }
+#endif

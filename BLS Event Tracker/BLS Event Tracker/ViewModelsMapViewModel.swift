@@ -14,6 +14,7 @@ extension Notification.Name {
     static let reportSubmitted = Notification.Name("reportSubmitted")
 }
 
+#if DEV_BUILD
 /// A GeoJSON road segment paired with a road status for map rendering.
 struct ColoredRoadSegment: Identifiable {
     let id: Int
@@ -30,6 +31,7 @@ struct ColoredRoadSegment: Identifiable {
         return coordinates[mid]
     }
 }
+#endif
 
 @MainActor
 class MapViewModel: ObservableObject {
@@ -44,8 +46,10 @@ class MapViewModel: ObservableObject {
     /// True while the 60-second cooldown after a manual refresh is active.
     @Published var refreshCoolingDown = false
 
+    #if DEV_BUILD
     /// Road segments paired with their current status color, recomputed when road statuses change.
     @Published var coloredRoadSegments: [ColoredRoadSegment] = []
+    #endif
 
     private let dataService = AppDataService.shared
     private let authManager = AuthenticationManager.shared
@@ -82,9 +86,13 @@ class MapViewModel: ObservableObject {
     
     /// Returns the most recent visible report for a given road
     func latestReport(for road: Road) -> Report? {
-        latestReport(forRoadID: road.id)
+        reports
+            .filter { $0.roadID == road.id && $0.isVisible }
+            .sorted { $0.createdAt > $1.createdAt }
+            .first
     }
 
+    #if DEV_BUILD
     /// Returns the most recent visible report for a given road ID
     func latestReport(forRoadID roadID: String) -> Report? {
         reports
@@ -92,11 +100,14 @@ class MapViewModel: ObservableObject {
             .sorted { $0.createdAt > $1.createdAt }
             .first
     }
+    #endif
     
     init() {
         setCameraToDefault()
         loadRoads()
+        #if DEV_BUILD
         GeoJSONService.shared.loadRoads()
+        #endif
     }
 
     // MARK: - Listener lifecycle
@@ -212,9 +223,12 @@ class MapViewModel: ObservableObject {
         for index in roads.indices {
             roads[index].updateStatus(from: reports)
         }
+        #if DEV_BUILD
         rebuildColoredSegments()
+        #endif
     }
 
+    #if DEV_BUILD
     /// Rebuilds the colored road segments from roads that have an active status.
     private func rebuildColoredSegments() {
         let service = GeoJSONService.shared
@@ -232,6 +246,7 @@ class MapViewModel: ObservableObject {
         }
         coloredRoadSegments = segments
     }
+    #endif
     
     func verifyReport(_ report: Report) async {
         guard let userID = authManager.user?.uid,

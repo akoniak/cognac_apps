@@ -20,9 +20,10 @@ struct MainMapView: View {
                 // User's location
                 UserAnnotation()
 
-                // Road status polylines from GeoJSON (show when "All" or "Roads" filter is selected)
+                // Road status display (show when "All" or "Roads" filter is selected)
                 if viewModel.selectedFilter == .all || viewModel.selectedFilter == .roads {
-                    // Visible colored road lines
+                    #if DEV_BUILD
+                    // GeoJSON road polylines colored by status
                     ForEach(viewModel.coloredRoadSegments) { segment in
                         MapPolyline(coordinates: segment.coordinates)
                             .stroke(segment.status.color, lineWidth: 4)
@@ -40,6 +41,20 @@ struct MainMapView: View {
                         }
                         .annotationTitles(.hidden)
                     }
+                    #else
+                    // Production: road status icons at center point
+                    ForEach(viewModel.roads.filter { $0.status != .unknown }) { road in
+                        Annotation(road.name, coordinate: road.coordinate) {
+                            RoadStatusMarker(
+                                road: road,
+                                isSelected: viewModel.selectedReport?.roadID == road.id
+                            )
+                            .onTapGesture {
+                                viewModel.selectedReport = viewModel.latestReport(for: road)
+                            }
+                        }
+                    }
+                    #endif
                 }
                 
                 // Report markers (filtered) - excludes road status reports

@@ -12,6 +12,13 @@
 		98B9F58C2F737A3C00848020 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 98B9F58B2F737A3C00848020 /* GoogleSignInSwift */; };
 		98B9F5922F76296100848020 /* ViewsAdminLeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B9F5912F76296100848020 /* ViewsAdminLeaderboardView.swift */; };
 		98B9F5942F77426200848020 /* REPUTATION_TEST_PLAN.md in Resources */ = {isa = PBXBuildFile; fileRef = 98B9F5932F77426200848020 /* REPUTATION_TEST_PLAN.md */; };
+		98E5739A2F8C27CB00B7E186 /* ViewsModerateReportsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B9F5862F72E4AF00848020 /* ViewsModerateReportsView.swift */; };
+		98E5739B2F8C27CB00B7E186 /* ViewsAdminLeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98B9F5912F76296100848020 /* ViewsAdminLeaderboardView.swift */; };
+		98E5739D2F8C27CB00B7E186 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 98E573932F8C27CB00B7E186 /* FirebaseAuth */; };
+		98E5739E2F8C27CB00B7E186 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 98E573952F8C27CB00B7E186 /* FirebaseFirestore */; };
+		98E5739F2F8C27CB00B7E186 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 98E573962F8C27CB00B7E186 /* GoogleSignIn */; };
+		98E573A02F8C27CB00B7E186 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 98E573982F8C27CB00B7E186 /* GoogleSignInSwift */; };
+		98E573A22F8C27CB00B7E186 /* REPUTATION_TEST_PLAN.md in Resources */ = {isa = PBXBuildFile; fileRef = 98B9F5932F77426200848020 /* REPUTATION_TEST_PLAN.md */; };
 		98EAB8982F724A8D0076BB01 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 98EAB8972F724A8D0076BB01 /* FirebaseAuth */; };
 		98EAB89A2F724A8D0076BB01 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 98EAB8992F724A8D0076BB01 /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
@@ -22,18 +29,89 @@
 		98B9F5862F72E4AF00848020 /* ViewsModerateReportsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewsModerateReportsView.swift; sourceTree = "<group>"; };
 		98B9F5912F76296100848020 /* ViewsAdminLeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewsAdminLeaderboardView.swift; sourceTree = "<group>"; };
 		98B9F5932F77426200848020 /* REPUTATION_TEST_PLAN.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = REPUTATION_TEST_PLAN.md; sourceTree = "<group>"; };
+		98E573A62F8C27CB00B7E186 /* BLS Event Tracker Dev.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BLS Event Tracker Dev.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		98E573A72F8C27CB00B7E186 /* BLS Event Tracker copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "BLS Event Tracker copy-Info.plist"; path = "/Users/adamkoniak/Documents/CognacCabinApp/BLS Event Tracker/BLS Event Tracker/BLS Event Tracker copy-Info.plist"; sourceTree = "<absolute>"; };
 		98FFC5B52F70E1A4003E1CB2 /* BLS Event Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BLS Event Tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		98E573A82F8C27CC00B7E186 /* Exceptions for "BLS Event Tracker" folder in "BLS Event Tracker Dev" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ACTIVITY_LIST_FEATURE.md,
+				ANNOUNCEMENT_FEATURE.md,
+				APP_FLOW.md,
+				Assets.xcassets,
+				BLS_Event_TrackerApp.swift,
+				BLUE_LAKE_SPRINGS_CONFIG.md,
+				CHECKLIST.md,
+				COMPACT_REPORTS_UPDATE.md,
+				ContentView.swift,
+				FIRESTORE_STRUCTURE.md,
+				"GoogleService-Info.plist",
+				"Info-Additions.plist",
+				ManagersAnnouncementManager.swift,
+				MOCK_MODE.md,
+				ModelsCommunity.swift,
+				ModelsReport.swift,
+				ModelsRoad.swift,
+				ModelsUserProfile.swift,
+				PULSING_MARKER_FEATURE.md,
+				README.md,
+				REPUTATION_SYSTEM.md,
+				ROAD_OVERLAY_FEATURE.md,
+				ROADS.geojson,
+				ServicesAppDataService.swift,
+				ServicesFirebaseDataService.swift,
+				ServicesGeocodingService.swift,
+				ServicesGeoJSONService.swift,
+				ServicesMockAuthenticationManager.swift,
+				ServicesMockDataService.swift,
+				ServicesNotificationManager.swift,
+				SETUP.md,
+				SHOW_ON_MAP_FEATURE.md,
+				START_HERE.md,
+				ViewModelsMapViewModel.swift,
+				ViewModelsNavigationCoordinator.swift,
+				ViewModelsNewReportViewModel.swift,
+				ViewModelsReportsListViewModel.swift,
+				ViewsLoginView.swift,
+				ViewsMainMapView.swift,
+				ViewsMainTabView.swift,
+				ViewsNewReportView.swift,
+				ViewsProfileView.swift,
+				ViewsReportDetailCard.swift,
+				ViewsReportsListView.swift,
+				ViewsRootView.swift,
+				ViewsSplashView.swift,
+			);
+			target = 98E573922F8C27CB00B7E186 /* BLS Event Tracker Dev */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		98FFC5B72F70E1A4003E1CB2 /* BLS Event Tracker */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				98E573A82F8C27CC00B7E186 /* Exceptions for "BLS Event Tracker" folder in "BLS Event Tracker Dev" target */,
+			);
 			path = "BLS Event Tracker";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		98E5739C2F8C27CB00B7E186 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98E5739D2F8C27CB00B7E186 /* FirebaseAuth in Frameworks */,
+				98E5739E2F8C27CB00B7E186 /* FirebaseFirestore in Frameworks */,
+				98E5739F2F8C27CB00B7E186 /* GoogleSignIn in Frameworks */,
+				98E573A02F8C27CB00B7E186 /* GoogleSignInSwift in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		98FFC5B22F70E1A4003E1CB2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -73,6 +151,7 @@
 				98B9F5862F72E4AF00848020 /* ViewsModerateReportsView.swift */,
 				98B9F5912F76296100848020 /* ViewsAdminLeaderboardView.swift */,
 				98B9F5932F77426200848020 /* REPUTATION_TEST_PLAN.md */,
+				98E573A72F8C27CB00B7E186 /* BLS Event Tracker copy-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -81,6 +160,7 @@
 			children = (
 				98FFC5B52F70E1A4003E1CB2 /* BLS Event Tracker.app */,
 				019D1888B433F9B0D27228F0 /* BLS Event TrackerTests.xctest */,
+				98E573A62F8C27CB00B7E186 /* BLS Event Tracker Dev.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -88,6 +168,32 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		98E573922F8C27CB00B7E186 /* BLS Event Tracker Dev */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 98E573A32F8C27CB00B7E186 /* Build configuration list for PBXNativeTarget "BLS Event Tracker Dev" */;
+			buildPhases = (
+				98E573992F8C27CB00B7E186 /* Sources */,
+				98E5739C2F8C27CB00B7E186 /* Frameworks */,
+				98E573A12F8C27CB00B7E186 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				98FFC5B72F70E1A4003E1CB2 /* BLS Event Tracker */,
+			);
+			name = "BLS Event Tracker Dev";
+			packageProductDependencies = (
+				98E573932F8C27CB00B7E186 /* FirebaseAuth */,
+				98E573952F8C27CB00B7E186 /* FirebaseFirestore */,
+				98E573962F8C27CB00B7E186 /* GoogleSignIn */,
+				98E573982F8C27CB00B7E186 /* GoogleSignInSwift */,
+			);
+			productName = "BLS Event Tracker";
+			productReference = 98E573A62F8C27CB00B7E186 /* BLS Event Tracker Dev.app */;
+			productType = "com.apple.product-type.application";
+		};
 		98FFC5B42F70E1A4003E1CB2 /* BLS Event Tracker */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 98FFC5C02F70E1A5003E1CB2 /* Build configuration list for PBXNativeTarget "BLS Event Tracker" */;
@@ -148,11 +254,20 @@
 			projectRoot = "";
 			targets = (
 				98FFC5B42F70E1A4003E1CB2 /* BLS Event Tracker */,
+				98E573922F8C27CB00B7E186 /* BLS Event Tracker Dev */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		98E573A12F8C27CB00B7E186 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98E573A22F8C27CB00B7E186 /* REPUTATION_TEST_PLAN.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		98FFC5B32F70E1A4003E1CB2 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -164,6 +279,15 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		98E573992F8C27CB00B7E186 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				98E5739A2F8C27CB00B7E186 /* ViewsModerateReportsView.swift in Sources */,
+				98E5739B2F8C27CB00B7E186 /* ViewsAdminLeaderboardView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		98FFC5B12F70E1A4003E1CB2 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -176,6 +300,80 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
+		98E573A42F8C27CB00B7E186 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BLS Event Tracker/BLS Event Tracker.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A9RLAXT55S;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "BLS Event Tracker copy-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "BLS Event Tracker";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "Cognac-Company.BLS-Event-Tracker.dev";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG DEV_BUILD";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		98E573A52F8C27CB00B7E186 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "BLS Event Tracker/BLS Event Tracker.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = A9RLAXT55S;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "BLS Event Tracker copy-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "BLS Event Tracker";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.3;
+				PRODUCT_BUNDLE_IDENTIFIER = "Cognac-Company.BLS-Event-Tracker.dev";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEV_BUILD;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		98FFC5BE2F70E1A5003E1CB2 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -306,7 +504,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "BLS Event Tracker/BLS Event Tracker.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = A9RLAXT55S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -322,7 +520,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3;
+				MARKETING_VERSION = 0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "Cognac-Company.BLS-Event-Tracker";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -342,7 +540,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "BLS Event Tracker/BLS Event Tracker.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_TEAM = A9RLAXT55S;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -358,7 +556,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.3;
+				MARKETING_VERSION = 0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "Cognac-Company.BLS-Event-Tracker";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -374,6 +572,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		98E573A32F8C27CB00B7E186 /* Build configuration list for PBXNativeTarget "BLS Event Tracker Dev" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				98E573A42F8C27CB00B7E186 /* Debug */,
+				98E573A52F8C27CB00B7E186 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		98FFC5B02F70E1A4003E1CB2 /* Build configuration list for PBXProject "BLS Event Tracker" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -403,6 +610,22 @@
 				minimumVersion = 9.1.0;
 			};
 		};
+		98E573942F8C27CB00B7E186 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+		98E573972F8C27CB00B7E186 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 9.1.0;
+			};
+		};
 		98FFC5ED2F70E638003E1CB2 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -422,6 +645,26 @@
 		98B9F58B2F737A3C00848020 /* GoogleSignInSwift */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 98B9F5882F737A3C00848020 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignInSwift;
+		};
+		98E573932F8C27CB00B7E186 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 98E573942F8C27CB00B7E186 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		98E573952F8C27CB00B7E186 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 98E573942F8C27CB00B7E186 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		98E573962F8C27CB00B7E186 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 98E573972F8C27CB00B7E186 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
+		};
+		98E573982F8C27CB00B7E186 /* GoogleSignInSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 98E573972F8C27CB00B7E186 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignInSwift;
 		};
 		98EAB8972F724A8D0076BB01 /* FirebaseAuth */ = {
