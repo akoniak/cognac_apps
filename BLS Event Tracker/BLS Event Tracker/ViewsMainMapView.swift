@@ -12,10 +12,14 @@ struct MainMapView: View {
     @StateObject private var viewModel = MapViewModel()
     @EnvironmentObject var navigationCoordinator: NavigationCoordinator
     @Binding var isReportCardVisible: Bool
+    #if DEV_BUILD
+    @State private var showNewReportForRoad: Road?
+    #endif
     
     var body: some View {
         ZStack {
             // Map showing all reports
+            MapReader { proxy in
             Map(position: $viewModel.cameraPosition) {
                 // User's location
                 UserAnnotation()
@@ -29,18 +33,6 @@ struct MainMapView: View {
                             .stroke(segment.status.color, lineWidth: 4)
                     }
 
-                    // Invisible tap targets at each segment midpoint
-                    ForEach(viewModel.coloredRoadSegments) { segment in
-                        Annotation("", coordinate: segment.midpoint) {
-                            Color.clear
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    viewModel.selectedReport = viewModel.latestReport(forRoadID: segment.roadID)
-                                }
-                        }
-                        .annotationTitles(.hidden)
-                    }
                     #else
                     // Production: road status icons at center point
                     ForEach(viewModel.roads.filter { $0.status != .unknown }) { road in
@@ -83,6 +75,14 @@ struct MainMapView: View {
                 MapUserLocationButton()
                 MapCompass()
             }
+            #if DEV_BUILD
+            .onTapGesture { point in
+                if let coord = proxy.convert(point, from: .local) {
+                    viewModel.handleMapTap(at: coord)
+                }
+            }
+            #endif
+            } // MapReader
             
             // Floating UI elements
             VStack(spacing: 0) {
@@ -199,6 +199,26 @@ struct MainMapView: View {
                 viewModel.selectedReport = report
             }
         }
+        #if DEV_BUILD
+        .alert(
+            "Create a report for \(viewModel.pendingRoadForReport?.name ?? "this road")?",
+            isPresented: Binding(
+                get: { viewModel.pendingRoadForReport != nil },
+                set: { if !$0 { viewModel.pendingRoadForReport = nil } }
+            )
+        ) {
+            Button("Create a Report") {
+                showNewReportForRoad = viewModel.pendingRoadForReport
+                viewModel.pendingRoadForReport = nil
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.pendingRoadForReport = nil
+            }
+        }
+        .sheet(item: $showNewReportForRoad) { road in
+            NewReportView(prefilledRoadID: road.id)
+        }
+        #endif
     }
 
     /// Returns a road-cleared callback only for roadBlocked reports; nil otherwise.

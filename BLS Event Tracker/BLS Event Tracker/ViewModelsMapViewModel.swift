@@ -21,15 +21,13 @@ struct ColoredRoadSegment: Identifiable {
     let roadID: String
     let coordinates: [CLLocationCoordinate2D]
     let status: RoadStatus
+}
 
-    /// Midpoint of the segment for placing tap targets
-    var midpoint: CLLocationCoordinate2D {
-        guard !coordinates.isEmpty else {
-            return CLLocationCoordinate2D()
-        }
-        let mid = coordinates.count / 2
-        return coordinates[mid]
-    }
+/// A single tap target point along a road segment.
+struct RoadTapPoint: Identifiable {
+    let id: String      // "roadID-segmentID-pointIndex"
+    let roadID: String
+    let coordinate: CLLocationCoordinate2D
 }
 #endif
 
@@ -49,6 +47,10 @@ class MapViewModel: ObservableObject {
     #if DEV_BUILD
     /// Road segments paired with their current status color, recomputed when road statuses change.
     @Published var coloredRoadSegments: [ColoredRoadSegment] = []
+    /// Tap target points for every road (including unreported), spread along each segment.
+    @Published var allRoadTapPoints: [RoadTapPoint] = []
+    /// Set when the user taps a road with no active report, prompting report creation.
+    @Published var pendingRoadForReport: Road?
     #endif
 
     private let dataService = AppDataService.shared
@@ -107,6 +109,7 @@ class MapViewModel: ObservableObject {
         loadRoads()
         #if DEV_BUILD
         GeoJSONService.shared.loadRoads()
+        rebuildTapPoints()
         #endif
     }
 
@@ -225,6 +228,7 @@ class MapViewModel: ObservableObject {
         }
         #if DEV_BUILD
         rebuildColoredSegments()
+        rebuildTapPoints()
         #endif
     }
 
@@ -245,6 +249,69 @@ class MapViewModel: ObservableObject {
             }
         }
         coloredRoadSegments = segments
+    }
+
+    /// Rebuilds proximity check points — sampled every 3rd coordinate from all GeoJSON
+    /// segments across every road. These are NOT rendered as annotations; they are only
+    /// used by handleMapTap for nearest-road detection.
+    private func rebuildTapPoints() {
+        let service = GeoJSONService.shared
+        var points: [RoadTapPoint] = []
+        for road in roads {
+            let segments = service.segments(forRoadID: road.id)
+            for seg in segments {
+                let coords = seg.coordinates
+                guard !coords.isEmpty else { continue }
+                for i in stride(from: 0, to: coords.count, by: 3) {
+                    points.append(RoadTapPoint(
+                        id: "\(road.id)-\(seg.id)-\(i)",
+                        roadID: road.id,
+                        coordinate: coords[i]
+                    ))
+                }
+            }
+        }
+        allRoadTapPoints = points
+    }
+
+    /// Called by the map's onTapGesture. Finds the nearest road to the tapped coordinate
+    /// and either shows its report or prompts report creation.
+    func handleMapTap(at coordinate: CLLocationCoordinate2D) {
+        // Don't interfere if the user tapped near an existing report marker
+        let reportThreshold = 0.0003 // ~30m
+        let nearReport = filteredReports.contains { report in
+            let dLat = report.latitude - coordinate.latitude
+            let dLon = report.longitude - coordinate.longitude
+            return sqrt(dLat * dLat + dLon * dLon) < reportThreshold
+        }
+        guard !nearReport else { return }
+
+        // Find the nearest road within threshold
+        let roadThreshold = 0.001 // ~100m
+        var nearestRoadID: String?
+        var minDistance = Double.infinity
+        for point in allRoadTapPoints {
+            let dLat = point.coordinate.latitude - coordinate.latitude
+            let dLon = point.coordinate.longitude - coordinate.longitude
+            let d = dLat * dLat + dLon * dLon
+            if d < minDistance {
+                minDistance = d
+                nearestRoadID = point.roadID
+            }
+        }
+        if let roadID = nearestRoadID, minDistance < roadThreshold * roadThreshold {
+            tapRoadSegment(roadID: roadID)
+        }
+    }
+
+    /// Handles a tap on a road: shows the latest report if one exists,
+    /// or prompts the user to create a new report for that road.
+    func tapRoadSegment(roadID: String) {
+        if let report = latestReport(forRoadID: roadID) {
+            selectedReport = report
+        } else if let road = roads.first(where: { $0.id == roadID }) {
+            pendingRoadForReport = road
+        }
     }
     #endif
     
