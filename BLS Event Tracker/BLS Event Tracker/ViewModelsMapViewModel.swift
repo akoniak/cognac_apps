@@ -14,24 +14,20 @@ extension Notification.Name {
     static let reportSubmitted = Notification.Name("reportSubmitted")
 }
 
-#if DEV_BUILD
 /// A GeoJSON road segment paired with a road status for map rendering.
 struct ColoredRoadSegment: Identifiable {
     let id: Int
     let roadID: String
     let coordinates: [CLLocationCoordinate2D]
     let status: RoadStatus
-
-    /// Midpoint of the segment for placing tap targets
-    var midpoint: CLLocationCoordinate2D {
-        guard !coordinates.isEmpty else {
-            return CLLocationCoordinate2D()
-        }
-        let mid = coordinates.count / 2
-        return coordinates[mid]
-    }
 }
-#endif
+
+/// A single tap target point along a road segment.
+struct RoadTapPoint: Identifiable {
+    let id: String      // "roadID-segmentID-pointIndex"
+    let roadID: String
+    let coordinate: CLLocationCoordinate2D
+}
 
 @MainActor
 class MapViewModel: ObservableObject {
@@ -46,10 +42,12 @@ class MapViewModel: ObservableObject {
     /// True while the 60-second cooldown after a manual refresh is active.
     @Published var refreshCoolingDown = false
 
-    #if DEV_BUILD
     /// Road segments paired with their current status color, recomputed when road statuses change.
     @Published var coloredRoadSegments: [ColoredRoadSegment] = []
-    #endif
+    /// Tap target points for every road (including unreported), spread along each segment.
+    @Published var allRoadTapPoints: [RoadTapPoint] = []
+    /// Set when the user taps a road with no active report, prompting report creation.
+    @Published var pendingRoadForReport: Road?
 
     private let dataService = AppDataService.shared
     private let authManager = AuthenticationManager.shared
@@ -92,7 +90,6 @@ class MapViewModel: ObservableObject {
             .first
     }
 
-    #if DEV_BUILD
     /// Returns the most recent visible report for a given road ID
     func latestReport(forRoadID roadID: String) -> Report? {
         reports
@@ -100,14 +97,12 @@ class MapViewModel: ObservableObject {
             .sorted { $0.createdAt > $1.createdAt }
             .first
     }
-    #endif
     
     init() {
         setCameraToDefault()
         loadRoads()
-        #if DEV_BUILD
         GeoJSONService.shared.loadRoads()
-        #endif
+        rebuildTapPoints()
     }
 
     // MARK: - Listener lifecycle
@@ -223,12 +218,10 @@ class MapViewModel: ObservableObject {
         for index in roads.indices {
             roads[index].updateStatus(from: reports)
         }
-        #if DEV_BUILD
         rebuildColoredSegments()
-        #endif
+        rebuildTapPoints()
     }
 
-    #if DEV_BUILD
     /// Rebuilds the colored road segments from roads that have an active status.
     private func rebuildColoredSegments() {
         let service = GeoJSONService.shared
@@ -246,7 +239,69 @@ class MapViewModel: ObservableObject {
         }
         coloredRoadSegments = segments
     }
-    #endif
+
+    /// Rebuilds proximity check points — sampled every 3rd coordinate from all GeoJSON
+    /// segments across every road. These are NOT rendered as annotations; they are only
+    /// used by handleMapTap for nearest-road detection.
+    private func rebuildTapPoints() {
+        let service = GeoJSONService.shared
+        var points: [RoadTapPoint] = []
+        for road in roads {
+            let segments = service.segments(forRoadID: road.id)
+            for seg in segments {
+                let coords = seg.coordinates
+                guard !coords.isEmpty else { continue }
+                for i in stride(from: 0, to: coords.count, by: 3) {
+                    points.append(RoadTapPoint(
+                        id: "\(road.id)-\(seg.id)-\(i)",
+                        roadID: road.id,
+                        coordinate: coords[i]
+                    ))
+                }
+            }
+        }
+        allRoadTapPoints = points
+    }
+
+    /// Called by the map's onTapGesture. Finds the nearest road to the tapped coordinate
+    /// and either shows its report or prompts report creation.
+    func handleMapTap(at coordinate: CLLocationCoordinate2D) {
+        // Don't interfere if the user tapped near an existing report marker
+        let reportThreshold = 0.0003 // ~30m
+        let nearReport = filteredReports.contains { report in
+            let dLat = report.latitude - coordinate.latitude
+            let dLon = report.longitude - coordinate.longitude
+            return sqrt(dLat * dLat + dLon * dLon) < reportThreshold
+        }
+        guard !nearReport else { return }
+
+        // Find the nearest road within threshold
+        let roadThreshold = 0.001 // ~100m
+        var nearestRoadID: String?
+        var minDistance = Double.infinity
+        for point in allRoadTapPoints {
+            let dLat = point.coordinate.latitude - coordinate.latitude
+            let dLon = point.coordinate.longitude - coordinate.longitude
+            let d = dLat * dLat + dLon * dLon
+            if d < minDistance {
+                minDistance = d
+                nearestRoadID = point.roadID
+            }
+        }
+        if let roadID = nearestRoadID, minDistance < roadThreshold * roadThreshold {
+            tapRoadSegment(roadID: roadID)
+        }
+    }
+
+    /// Handles a tap on a road: shows the latest report if one exists,
+    /// or prompts the user to create a new report for that road.
+    func tapRoadSegment(roadID: String) {
+        if let report = latestReport(forRoadID: roadID) {
+            selectedReport = report
+        } else if let road = roads.first(where: { $0.id == roadID }) {
+            pendingRoadForReport = road
+        }
+    }
     
     func verifyReport(_ report: Report) async {
         guard let userID = authManager.user?.uid,
@@ -256,7 +311,9 @@ class MapViewModel: ObservableObject {
 
         do {
             try await dataService.verifyReport(reportID: reportID, communityID: report.communityID, userID: userID, authorID: report.authorID)
-            await loadReports()
+            // In Firebase mode the real-time listener picks up the change automatically.
+            // Only force a reload in mock mode (one-shot fetch, no listener).
+            if useMockData { await loadReports() }
             await authManager.refreshUserProfile()
         } catch {
             print("⚠️ verifyReport error: \(error)")
@@ -273,7 +330,9 @@ class MapViewModel: ObservableObject {
 
         do {
             try await dataService.disputeReport(reportID: reportID, communityID: report.communityID, userID: userID, authorID: report.authorID)
-            await loadReports()
+            // In Firebase mode the real-time listener picks up the change automatically.
+            // Only force a reload in mock mode (one-shot fetch, no listener).
+            if useMockData { await loadReports() }
             await authManager.refreshUserProfile()
         } catch {
             errorMessage = "Failed to dispute report"
@@ -421,12 +480,17 @@ class MapViewModel: ObservableObject {
     }
 
     func focusOnReport(_ report: Report) {
-        // Zoom to the report location with animation
-        let region = MKCoordinateRegion(
-            center: report.coordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+        // Shift the center south so the report appears in the upper portion of the map,
+        // above the report detail card that slides up from the bottom.
+        let cardOffsetDegrees = 0.003
+        let center = CLLocationCoordinate2D(
+            latitude: report.coordinate.latitude - cardOffsetDegrees,
+            longitude: report.coordinate.longitude
         )
-        
+        let region = MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)
+        )
         withAnimation {
             cameraPosition = .region(region)
         }

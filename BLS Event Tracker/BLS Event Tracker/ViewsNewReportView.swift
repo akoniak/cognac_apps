@@ -10,7 +10,8 @@ import SwiftUI
 struct NewReportView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = NewReportViewModel()
-    
+    var prefilledRoadID: String? = nil
+
     var body: some View {
         NavigationStack {
             Form {
@@ -83,6 +84,11 @@ struct NewReportView: View {
                         .background(.regularMaterial)
                         .cornerRadius(12)
                     }
+                }
+            }
+            .onAppear {
+                if let roadID = prefilledRoadID {
+                    viewModel.selectedRoadID = roadID
                 }
             }
         }
