@@ -10,9 +10,13 @@ import SwiftUI
 struct MainTabView: View {
     @StateObject private var navigationCoordinator = NavigationCoordinator()
     @ObservedObject private var notificationManager = NotificationManager.shared
+    @ObservedObject private var authManager = AuthenticationManager.shared
     @State private var selectedTab = 0
     @State private var showNewReport = false
     @State private var isReportCardVisible = false
+    /// Set when the user taps "New Report" without being signed in.
+    /// After login completes, NewReportView opens automatically.
+    @State private var pendingNewReport = false
 
     var body: some View {
         ZStack {
@@ -32,13 +36,36 @@ struct MainTabView: View {
                     .badge(notificationManager.activityBadgeCount)
                     .tag(1)
                 
-                // Profile View
-                ProfileView()
-                    .tabItem {
-                        Label("Account", systemImage: "person.circle.fill")
+                // Account tab: full profile when signed in, sign-in prompt otherwise
+                Group {
+                    if authManager.isAuthenticated {
+                        ProfileView()
+                    } else {
+                        VStack(spacing: 20) {
+                            Spacer()
+                            Image(systemName: "person.circle")
+                                .font(.system(size: 64))
+                                .foregroundStyle(.secondary)
+                            Text("Sign In to Access Your Account")
+                                .font(.title3.bold())
+                            Text("View your reputation, report history, and community standing.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 40)
+                            Button("Sign In") {
+                                authManager.isShowingLoginSheet = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                            Spacer()
+                        }
                     }
-                    .badge(notificationManager.accountBadgeCount)
-                    .tag(2)
+                }
+                .tabItem {
+                    Label("Account", systemImage: "person.circle.fill")
+                }
+                .badge(notificationManager.accountBadgeCount)
+                .tag(2)
             }
             .environmentObject(navigationCoordinator)
             
@@ -49,7 +76,12 @@ struct MainTabView: View {
                     Spacer()
                     
                     Button {
-                        showNewReport = true
+                        if authManager.canTakeActions {
+                            showNewReport = true
+                        } else {
+                            pendingNewReport = true
+                            authManager.isShowingLoginSheet = true
+                        }
                     } label: {
                         Label("New Report", systemImage: "plus.circle.fill")
                             .font(.headline)
@@ -66,6 +98,17 @@ struct MainTabView: View {
         }
         .sheet(isPresented: $showNewReport) {
             NewReportView()
+        }
+        .sheet(isPresented: $authManager.isShowingLoginSheet) {
+            LoginView()
+        }
+        .onChange(of: authManager.isAuthenticated) { _, isAuth in
+            // If the user just signed in and had tapped "New Report" before logging in,
+            // open the report form now that they are authenticated.
+            if isAuth && pendingNewReport {
+                pendingNewReport = false
+                showNewReport = true
+            }
         }
         .onChange(of: selectedTab) { _, tab in
             switch tab {

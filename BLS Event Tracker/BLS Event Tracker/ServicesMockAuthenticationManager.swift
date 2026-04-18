@@ -46,6 +46,16 @@ class AuthenticationManager: ObservableObject {
     @Published var isCheckingAuth: Bool
     @Published var isLoading = false
     @Published var errorMessage: String?
+    /// Set to true to present the login sheet from anywhere in the app.
+    /// Cleared automatically when the user successfully authenticates.
+    @Published var isShowingLoginSheet = false
+
+    /// True when the user is authenticated AND not banned.
+    /// Use this to gate all write actions — banned users get read-only access
+    /// identical to unauthenticated users.
+    var canTakeActions: Bool {
+        isAuthenticated && userProfile?.isBanned != true
+    }
 
     /// Set when Google sign-in detects an existing email/password account.
     /// LoginView presents a password prompt so the accounts can be linked.
@@ -106,20 +116,34 @@ class AuthenticationManager: ObservableObject {
                 guard let self else { return }
                 defer { self.isCheckingAuth = false }
                 if let firebaseUser {
-                    let appUser = AppUser(firebaseUser)
-                    self.user = appUser
-                    // Don't set isAuthenticated until profile is loaded —
-                    // this prevents the map from loading before communityID is available.
-                    await self.loadOrCreateUserProfile(for: appUser)
-                    // Only mark authenticated if a valid profile with a communityID was loaded.
-                    // If profile loading failed (e.g. community not found in Firestore), keep
-                    // the user on the login screen so they can retry rather than landing in a
-                    // broken state with a nil communityID.
-                    self.isAuthenticated = self.userProfile?.communityID.isEmpty == false
+                    if firebaseUser.isAnonymous {
+                        // Anonymous sign-in for read-only access: gives a Firestore auth token
+                        // so unauthenticated users can read community reports.
+                        // isAuthenticated stays false — only real accounts can take write actions.
+                        self.user = AppUser(firebaseUser)
+                    } else {
+                        let appUser = AppUser(firebaseUser)
+                        self.user = appUser
+                        // Don't set isAuthenticated until profile is loaded —
+                        // this prevents the map from loading before communityID is available.
+                        await self.loadOrCreateUserProfile(for: appUser)
+                        // Only mark authenticated if a valid profile with a communityID was loaded.
+                        // If profile loading failed (e.g. community not found in Firestore), keep
+                        // the user on the login screen so they can retry rather than landing in a
+                        // broken state with a nil communityID.
+                        self.isAuthenticated = self.userProfile?.communityID.isEmpty == false
+                        if self.isAuthenticated { self.isShowingLoginSheet = false }
+                    }
                 } else {
+                    // No Firebase user at all. Sign in anonymously so Firestore reads succeed
+                    // for guests. isCheckingAuth stays true (defer fires after await) so the
+                    // splash screen remains up until the anonymous token is ready.
                     self.user = nil
                     self.userProfile = nil
                     self.isAuthenticated = false
+                    _ = try? await Auth.auth().signInAnonymously()
+                    // defer fires here: isCheckingAuth = false → app shows MainTabView,
+                    // by which point the anonymous token is active and Firestore is readable.
                 }
             }
         }

@@ -28,7 +28,7 @@ struct ReportDetailCard: View {
     /// Returns true if the delete succeeded (card should dismiss), false if blocked (card stays open).
     let onDelete: (() async -> Bool)?
     
-    @StateObject private var authManager = AuthenticationManager.shared
+    @ObservedObject private var authManager = AuthenticationManager.shared
     @State private var isProcessing = false
     @State private var confirmationMessage: String? = nil
     @State private var deleteErrorMessage: String? = nil
@@ -173,7 +173,7 @@ struct ReportDetailCard: View {
 
                 // Own-report: author can mark the situation as resolved at any time
                 // (this is a real-world status update, not a vote on their own report)
-                if isOwnReport && authManager.userProfile?.role.canSubmitReports == true {
+                if isOwnReport && authManager.canTakeActions {
                     if let message = confirmationMessage {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.circle.fill")
@@ -250,7 +250,7 @@ struct ReportDetailCard: View {
                 }
 
                 // Action buttons (only for general users and above, never for the report's author)
-                if authManager.userProfile?.role.canSubmitReports == true && !isOwnReport {
+                if authManager.canTakeActions && authManager.userProfile?.role.canSubmitReports == true && !isOwnReport {
                     if let message = confirmationMessage {
                         // Confirmation message shown after voting
                         HStack(spacing: 8) {
@@ -551,7 +551,7 @@ struct ReportDetailCard: View {
     /// Delete is only available to the author, and only while the report has no external confirmations.
     /// Once another user has confirmed it the report is considered community-validated and locked.
     private var canDeleteReport: Bool {
-        isOwnReport && report.verificationCount == 0 && report.corroboratingSubmitterIDs.isEmpty && now.timeIntervalSince(report.createdAt) < 10 * 60
+        authManager.canTakeActions && isOwnReport && report.verificationCount == 0 && report.corroboratingSubmitterIDs.isEmpty && now.timeIntervalSince(report.createdAt) < 10 * 60
     }
 
     private var userHasVerified: Bool {
