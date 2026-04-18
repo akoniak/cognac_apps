@@ -52,12 +52,17 @@ class ReportsListViewModel: ObservableObject {
     // MARK: - Load
 
     func loadReports() async {
-        // If the profile isn't loaded yet, return silently.
-        // The view's .onChange(of: userProfile?.communityID) will retry
-        // once the profile arrives from Firestore.
-        guard let communityID = authManager.userProfile?.communityID,
-              !communityID.isEmpty else {
-            return
+        // Prefer the authenticated user's community; fall back to the app's default
+        // community so unauthenticated users can still see reports in the activity list.
+        let communityID: String
+        if let profileCommunityID = authManager.userProfile?.communityID, !profileCommunityID.isEmpty {
+            communityID = profileCommunityID
+        } else {
+            do {
+                communityID = try await dataService.fetchDefaultCommunityID()
+            } catch {
+                return  // Can't determine community — nothing to load
+            }
         }
 
         if useMockData {

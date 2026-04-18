@@ -11,6 +11,7 @@ import MapKit
 struct MainMapView: View {
     @StateObject private var viewModel = MapViewModel()
     @EnvironmentObject var navigationCoordinator: NavigationCoordinator
+    @ObservedObject private var authManager = AuthenticationManager.shared
     @Binding var isReportCardVisible: Bool
     @State private var showNewReportForRoad: Road?
     
@@ -194,8 +195,13 @@ struct MainMapView: View {
             )
         ) {
             Button("Create a Report") {
-                showNewReportForRoad = viewModel.pendingRoadForReport
-                viewModel.pendingRoadForReport = nil
+                if authManager.canTakeActions {
+                    showNewReportForRoad = viewModel.pendingRoadForReport
+                    viewModel.pendingRoadForReport = nil
+                } else {
+                    viewModel.pendingRoadForReport = nil
+                    authManager.isShowingLoginSheet = true
+                }
             }
             Button("Cancel", role: .cancel) {
                 viewModel.pendingRoadForReport = nil

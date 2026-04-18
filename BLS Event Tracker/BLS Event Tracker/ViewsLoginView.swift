@@ -9,7 +9,8 @@ import SwiftUI
 import AuthenticationServices
 
 struct LoginView: View {
-    @StateObject private var authManager = AuthenticationManager.shared
+    @ObservedObject private var authManager = AuthenticationManager.shared
+    @Environment(\.dismiss) private var dismiss
 
     @State private var email = ""
     @State private var password = ""
@@ -181,6 +182,10 @@ struct LoginView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(authManager.errorMessage ?? "")
+            }
+            // When presented as a sheet and login succeeds, dismiss automatically.
+            .onChange(of: authManager.isAuthenticated) { _, isAuth in
+                if isAuth { dismiss() }
             }
         }
     }

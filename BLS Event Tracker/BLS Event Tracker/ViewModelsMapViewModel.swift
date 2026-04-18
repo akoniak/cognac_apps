@@ -134,12 +134,17 @@ class MapViewModel: ObservableObject {
 
     /// Initial load: starts the listener (Firebase) or does a one-shot fetch (mock).
     func loadReports() async {
-        // If the profile isn't loaded yet, return silently.
-        // The map view's .onChange(of: userProfile?.communityID) will retry
-        // once the profile arrives from Firestore.
-        guard let communityID = authManager.userProfile?.communityID,
-              !communityID.isEmpty else {
-            return
+        // Prefer the authenticated user's community; fall back to the app's default
+        // community so unauthenticated users can still see reports on the map.
+        let communityID: String
+        if let profileCommunityID = authManager.userProfile?.communityID, !profileCommunityID.isEmpty {
+            communityID = profileCommunityID
+        } else {
+            do {
+                communityID = try await dataService.fetchDefaultCommunityID()
+            } catch {
+                return  // Can't determine community — nothing to load
+            }
         }
 
         if useMockData {
@@ -482,7 +487,7 @@ class MapViewModel: ObservableObject {
     func focusOnReport(_ report: Report) {
         // Shift the center south so the report appears in the upper portion of the map,
         // above the report detail card that slides up from the bottom.
-        let cardOffsetDegrees = 0.003
+        let cardOffsetDegrees = 0.0018
         let center = CLLocationCoordinate2D(
             latitude: report.coordinate.latitude - cardOffsetDegrees,
             longitude: report.coordinate.longitude
